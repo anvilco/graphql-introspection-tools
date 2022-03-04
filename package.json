@@ -1,7 +1,7 @@
 {
   "name": "introspection-tools",
   "version": "0.0.0",
-  "description": "A thing to mess with GraphQL introspection query responses.",
+  "description": "A library to query and manipulate GraphQL Introspection Query results in some useful ways.",
   "main": "dist/index.js",
   "author": "Chris Newhouse",
   "license": "MIT",
