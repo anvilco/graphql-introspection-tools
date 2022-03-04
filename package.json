@@ -1,5 +1,5 @@
 {
-  "name": "introspection-tools",
+  "name": "@anvilco/graphql-introspection-tools",
   "version": "0.0.0",
   "description": "A library to query and manipulate GraphQL Introspection Query results in some useful ways.",
   "keywords": [
@@ -30,6 +30,8 @@
     "build": "babel src --out-dir ./dist",
     "clean": "yarn rimraf ./dist",
     "prepare": "yarn clean && yarn build",
+    "pub": "yarn prepare && npm publish",
+    "pub:dry-run": "yarn prepare && npm publish --dry-run",
     "test": "mocha --config ./test/mocha-config.js"
   },
   "dependencies": {
