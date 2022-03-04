@@ -1,0 +1,9 @@
+dist/
+*.DS_Store
+yarn-error.log
+
+# Dependency directories
+node_modules/
+
+# Output of 'npm pack'
+*.tgz
