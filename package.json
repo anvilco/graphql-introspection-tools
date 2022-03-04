@@ -2,10 +2,27 @@
   "name": "introspection-tools",
   "version": "0.0.0",
   "description": "A library to query and manipulate GraphQL Introspection Query results in some useful ways.",
+  "keywords": [
+    "graphql",
+    "schema",
+    "introspection",
+    "introspection-query",
+    "introspection-query-manipulator",
+    "query",
+    "remove",
+    "manipulate",
+    "manipulator"
+  ],
   "main": "dist/index.js",
+  "files": [
+    "package.json",
+    "README.md",
+    "LICENSE.md",
+    "CHANGELOG.md",
+    "dist/"
+  ],
   "author": "Chris Newhouse",
   "license": "MIT",
-  "private": true,
   "engines": {
     "node": ">=8"
   },

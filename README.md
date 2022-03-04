@@ -10,6 +10,8 @@ A library to query and manipulate GraphQL Introspection Query results in some us
 
 ## Usage
 
+Coming soon!
+
 [npm]: https://badge.fury.io/js/microfiber.svg
 [npm-downloads]: https://img.shields.io/npm/dw/microfiber
 [npm-url]: https://www.npmjs.com/package/microfiber

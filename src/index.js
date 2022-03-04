@@ -1,10 +1,6 @@
 import get from 'lodash.get'
-// const set = require('lodash.set')
 import unset from 'lodash.unset'
-// const unset = require('lodash.unset')
 import defaults from 'lodash.defaults'
-// const defaults = require('lodash.defaults')
-
 
 // Constructor Options
 const ANALYZE_DEFAULT = true

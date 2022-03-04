@@ -1,6 +1,10 @@
+# Babel's output
 dist/
-*.DS_Store
+
+yarn.lock
 yarn-error.log
+
+*.DS_Store
 
 # Dependency directories
 node_modules/
