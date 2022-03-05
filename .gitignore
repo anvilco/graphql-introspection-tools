@@ -1,0 +1,13 @@
+# Babel's output
+dist/
+
+yarn.lock
+yarn-error.log
+
+*.DS_Store
+
+# Dependency directories
+node_modules/
+
+# Output of 'npm pack'
+*.tgz

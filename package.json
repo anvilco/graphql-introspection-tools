@@ -1,0 +1,56 @@
+{
+  "name": "@anvilco/graphql-introspection-tools",
+  "version": "0.0.1",
+  "description": "A library to query and manipulate GraphQL Introspection Query results in some useful ways.",
+  "keywords": [
+    "graphql",
+    "schema",
+    "introspection",
+    "introspection-query",
+    "introspection-query-manipulator",
+    "query",
+    "remove",
+    "manipulate",
+    "manipulator"
+  ],
+  "main": "dist/index.js",
+  "files": [
+    "package.json",
+    "README.md",
+    "LICENSE.md",
+    "CHANGELOG.md",
+    "dist/"
+  ],
+  "author": "Chris Newhouse",
+  "license": "MIT",
+  "engines": {
+    "node": ">=8"
+  },
+  "scripts": {
+    "build": "babel src --out-dir ./dist",
+    "clean": "yarn rimraf ./dist",
+    "prepare": "yarn clean && yarn build",
+    "pub": "yarn prepare && npm publish",
+    "pub:dry-run": "yarn prepare && npm publish --dry-run",
+    "test": "mocha --config ./test/mocha-config.js"
+  },
+  "dependencies": {
+    "lodash.defaults": "^4.2.0",
+    "lodash.get": "^4.4.2",
+    "lodash.unset": "^4.5.2"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.17.6",
+    "@babel/core": "^7.17.5",
+    "@babel/preset-env": "^7.16.11",
+    "@babel/register": "^7.17.0",
+    "bdd-lazy-var": "^2.6.1",
+    "chai": "^4.3.6",
+    "eslint": "^8.10.0",
+    "eslint-plugin-mocha": "^10.0.3",
+    "graphql": "^16.3.0",
+    "lodash.isequal": "^4.5.0",
+    "mocha": "^9.2.1",
+    "rimraf": "^3.0.2"
+  }
+}
