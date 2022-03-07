@@ -1,0 +1,8 @@
+{
+  "delay": 1000,
+  "verbose": true,
+  "ext": "js,json,gql,graphql,graphqls",
+  "ignore": [
+    ".git"
+  ]
+}

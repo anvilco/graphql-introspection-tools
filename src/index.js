@@ -155,6 +155,7 @@ export default class Introspection {
     // Need to keep track of these so that we never remove them for not being referenced
     this.queryTypeName = get(this.schema, 'queryType.name')
     this.mutationTypeName = get(this.schema, 'mutationType.name')
+    this.subscriptionTypeName = get(this.schema, 'subscriptionType.name')
 
     for (let typesIdx = 0; typesIdx < this.schema.types.length; typesIdx++) {
       const type = this.schema.types[typesIdx]
@@ -258,9 +259,10 @@ export default class Introspection {
     return this.schema.types[this.getTypeIndex({ kind, name })]
   }
 
-  getAllTypes({ includeReserved = false, includeQuery = false, includeMutation = false } = {}) {
+  getAllTypes({ includeReserved = false, includeQuery = false, includeMutation = false, includeSubscription = false } = {}) {
     const queryType = this.getQueryType()
     const mutationType = this.getMutationType()
+    const subscriptionType = this.getSubscriptionType()
 
     return this.schema.types.filter((type) => {
       if (!includeReserved && isReservedType(type)) {
@@ -270,6 +272,10 @@ export default class Introspection {
         return false
       }
       if (mutationType && !includeMutation && typesAreSame(type, mutationType)) {
+        return false
+      }
+
+      if (subscriptionType && !includeSubscription && typesAreSame(type, subscriptionType)) {
         return false
       }
 
@@ -320,6 +326,23 @@ export default class Introspection {
     return this.getField({ typeKind: mutationType.kind, typeName: mutationType.name, fieldName: name })
   }
 
+  getSubscriptionType() {
+    if (!this.subscriptionTypeName) {
+      return false
+    }
+
+    return this.getType({ kind: KIND_OBJECT, name: this.subscriptionTypeName })
+  }
+
+  getSubscription({ name }) {
+    const subscriptionType = this.getSubscriptionType()
+    if (!subscriptionType) {
+      return false
+    }
+
+    return this.getField({ typeKind: subscriptionType.kind, typeName: subscriptionType.name, fieldName: name })
+  }
+
   getField({ typeKind = KIND_OBJECT, typeName, fieldName }) {
     const type = this.getType({ kind: typeKind, name: typeName })
     if (!type) {
@@ -337,7 +360,6 @@ export default class Introspection {
     return this.getField({ typeName: inputName, typeKind: KIND_INPUT_OBJECT, fieldName: inputFieldName })
   }
 
-  // TODO: add test
   getArg({ typeKind, typeName, fieldName, argName }) {
     const field = this.getField({ typeKind, typeName, fieldName })
     if (!(field && field.args.length)) {
@@ -471,6 +493,14 @@ export default class Introspection {
     this.removeField({ typeKind: KIND_OBJECT, typeName: this.mutationTypeName, fieldName: name, cleanup })
   }
 
+  removeSubscription({ name, cleanup = CLEANUP_DEFAULT }) {
+    if (!this.subscriptionTypeName) {
+      return false
+    }
+
+    this.removeField({ typeKind: KIND_OBJECT, typeName: this.subscriptionTypeName, fieldName: name, cleanup })
+  }
+
   removeFieldsOfType({ kind, name, cleanup = CLEANUP_DEFAULT }) {
     return this._removeThingsOfType({ kind, name, map: this.fieldsOfTypeMap, cleanup })
   }
@@ -523,13 +553,16 @@ export default class Introspection {
     const typesEncountered = new Set()
     const types = []
 
-    // The Query and Mutation Types should never be removed due to not being referenced
+    // The Query, Mutation and Subscription Types should never be removed due to not being referenced
     // by anything
     if (this.queryTypeName) {
       typesEncountered.add(buildKey({ kind: KIND_OBJECT, name: this.queryTypeName }))
     }
     if (this.mutationTypeName) {
       typesEncountered.add(buildKey({ kind: KIND_OBJECT, name: this.mutationTypeName }))
+    }
+    if (this.subscriptionTypeName) {
+      typesEncountered.add(buildKey({ kind: KIND_OBJECT, name: this.subscriptionTypeName }))
     }
 
     for (const type of this.schema.types) {
@@ -653,7 +686,7 @@ function isUndef(item) {
   return typeof item === 'undefined'
 }
 
-function typesAreSame (typeA, typeB) {
+export function typesAreSame (typeA, typeB) {
   return typeA.kind === typeB.kind && typeA.name === typeB.name
 }
 

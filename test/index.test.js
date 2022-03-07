@@ -5,7 +5,7 @@ import IntrospectionManipulator,  {
   KIND_INPUT_OBJECT,
   KIND_UNION,
   KIND_ENUM,
-} from '../src/index'
+} from '../dist/index'
 
 import {
   introspectionResponseFromSchemaSDL,
@@ -14,11 +14,18 @@ import {
 describe('index', function () {
   def('QueryType', () => `type Query {
       myTypes: [MyType!]
-    }`)
+    }`
+  )
 
   def('MutationType', () => `type Mutation {
       createYetAnotherType(name: String!): YetAnotherType!
-    }`)
+    }`
+  )
+
+  def('SubscriptionType', () => `type Subscription {
+      subscribeToMyTypeFieldStringChanges(myTypeId: ID): RandomTypeOne!
+    }`
+  )
 
   def('schemaSDLBase', () => `
 
@@ -53,6 +60,8 @@ describe('index', function () {
     ${$.QueryType}
 
     ${$.MutationType}
+
+    ${$.SubscriptionType}
 
     type MyType {
       # The control
@@ -137,6 +146,10 @@ describe('index', function () {
     type YetAnotherType {
       fieldString: String
     }
+
+    type RandomTypeOne {
+      fieldString: String
+    }
   `
   )
   def('schemaSDL', () => $.schemaSDLBase)
@@ -177,10 +190,25 @@ describe('index', function () {
     const introspection = new IntrospectionManipulator($.response)
     let response = introspection.getResponse()
 
+    //************************
+    //
     // Sanity checks
     expect(isEqual($.response, response)).to.be.true
-    expect(findType({ kind: KIND_OBJECT, name: 'Query', response })).to.be.ok
-    expect(findType({ kind: KIND_OBJECT, name: 'Mutation', response })).to.be.ok
+
+    let queryType = introspection.getQueryType()
+    expect(queryType).to.be.ok
+    expect(queryType).to.eql(findType({ kind: KIND_OBJECT, name: 'Query', response }))
+    expect(introspection.getQuery({ name: 'myTypes' })).be.ok
+
+    let mutationType = introspection.getMutationType()
+    expect(mutationType).to.be.ok
+    expect(mutationType).to.eql(findType({ kind: KIND_OBJECT, name: 'Mutation', response }))
+    expect(introspection.getMutation({ name: 'createYetAnotherType' })).be.ok
+
+    let subscriptionType = introspection.getSubscriptionType()
+    expect(subscriptionType).to.be.ok
+    expect(subscriptionType).to.eql(findType({ kind: KIND_OBJECT, name: 'Subscription', response }))
+    expect(introspection.getSubscription({ name: 'subscribeToMyTypeFieldStringChanges' })).be.ok
 
     expect(findFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldString', response })).to.be.ok
     expect(findType({ kind: KIND_SCALAR, name: 'SecretScalar', response })).to.be.ok
@@ -190,12 +218,23 @@ describe('index', function () {
     expect(findFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldSecretScalarNonNullArray', response })).to.be.ok
     expect(findFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldSecretScalarNonNullArrayOfNonNulls', response })).to.be.ok
 
-    expect(findArgOnFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArg', argName: 'argSecretScalar', response })).to.be.ok
-    expect(findArgOnFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArrayArg', argName: 'argSecretScalar', response })).to.be.ok
-    expect(findArgOnFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarNonNullArrayArg', argName: 'argSecretScalar', response })).to.be.ok
-    expect(findArgOnFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarNonNullArrayOfNonNullsArg', argName: 'argSecretScalar', response })).to.be.ok
+    let arg = introspection.getArg({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArg', argName: 'argSecretScalar', response })
+    expect(arg).to.be.ok
+    expect(arg).to.eql(findArgOnFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArg', argName: 'argSecretScalar', response }))
+    arg = introspection.getArg({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArg', argName: 'argSecretScalar', response })
+    expect(arg).to.be.ok.to.be.ok
+    arg = introspection.getArg({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArrayArg', argName: 'argSecretScalar', response })
+    expect(arg).to.be.ok
+    arg = introspection.getArg({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarNonNullArrayArg', argName: 'argSecretScalar', response })
+    expect(arg).to.be.ok
+    arg = introspection.getArg({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarNonNullArrayOfNonNullsArg', argName: 'argSecretScalar', response })
+    expect(arg).to.be.ok
 
     expect(findInputFieldOnInputType({ typeName: 'InputWithSecretScalar', inputFieldName: 'secretScalar', response })).to.be.ok
+
+    //
+    //
+    //************************
 
     let secretEnum = findType({ kind: KIND_ENUM, name: 'SecretEnum', response })
     expect(secretEnum).to.be.ok
@@ -226,6 +265,7 @@ describe('index', function () {
     expect(isEqual($.response, response)).to.be.false
     expect(findType({ kind: KIND_OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KIND_OBJECT, name: 'Mutation', response })).to.be.ok
+    expect(findType({ kind: KIND_OBJECT, name: 'Subscription', response })).to.be.ok
 
     expect(findFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldString', response })).to.be.ok
     expect(findType({ kind: KIND_SCALAR, name: 'SecretScalar', response })).to.not.be.ok
@@ -251,6 +291,7 @@ describe('index', function () {
     response = introspection.getResponse()
     expect(findType({ kind: KIND_OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KIND_OBJECT, name: 'Mutation', response })).to.be.ok
+    expect(findType({ kind: KIND_OBJECT, name: 'Subscription', response })).to.be.ok
 
     // Removed that value so only 2 left
     secretEnum = findType({ kind: KIND_ENUM, name: 'SecretEnum', response })
@@ -274,6 +315,7 @@ describe('index', function () {
     response = introspection.getResponse()
     expect(findType({ kind: KIND_OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KIND_OBJECT, name: 'Mutation', response })).to.be.ok
+    expect(findType({ kind: KIND_OBJECT, name: 'Subscription', response })).to.be.ok
 
     expect(findType({ kind: KIND_ENUM, name: 'SecretEnum', response })).to.not.be.ok
 
@@ -294,6 +336,7 @@ describe('index', function () {
     response = introspection.getResponse()
     expect(findType({ kind: KIND_OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KIND_OBJECT, name: 'Mutation', response })).to.be.ok
+    expect(findType({ kind: KIND_OBJECT, name: 'Subscription', response })).to.be.ok
     expect(findArgOnFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldString', argName: 'argString', response })).to.not.be.ok
 
     // Remove a Field from a Type
@@ -303,6 +346,7 @@ describe('index', function () {
     response = introspection.getResponse()
     expect(findType({ kind: KIND_OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KIND_OBJECT, name: 'Mutation', response })).to.be.ok
+    expect(findType({ kind: KIND_OBJECT, name: 'Subscription', response })).to.be.ok
     expect(findFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldString', response })).to.not.be.ok
 
     // Remove possible type from a Union Type
@@ -368,8 +412,23 @@ describe('index', function () {
     expect(findType({ kind: KIND_OBJECT, name: 'YetAnotherType', response })).to.not.be.ok
     expect(findFieldOnType({ typeKind: KIND_OBJECT, typeName: 'Mutation', fieldName: 'createYetAnotherType', response })).to.not.be.ok
 
-    // console.log(introspection.inputFieldsOfTypeMap)
-    // console.log(JSON.stringify(response))
+    //********************************
+    // Remove the "" Subscription, which should remove the "RandomTypeOne" now that nothing
+    // references it
+
+    // Make sure they're there to start with
+    expect(findFieldOnType({ typeKind: KIND_OBJECT, typeName: 'Subscription', fieldName: 'subscribeToMyTypeFieldStringChanges', response })).to.be.ok
+    expect(findType({ kind: KIND_OBJECT, name: 'RandomTypeOne', response })).to.be.ok
+
+    // Remove them, and make sure they're not there
+    introspection.removeSubscription({ name: 'subscribeToMyTypeFieldStringChanges' })
+    response = introspection.getResponse()
+    expect(findFieldOnType({ typeKind: KIND_OBJECT, typeName: 'Subscription', fieldName: 'subscribeToMyTypeFieldStringChanges', response })).to.not.be.ok
+    expect(findType({ kind: KIND_OBJECT, name: 'RandomTypeOne', response })).to.not.be.ok
+
+    //
+    //
+    //********************************
   })
 })
 
