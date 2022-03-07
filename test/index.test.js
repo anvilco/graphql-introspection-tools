@@ -17,8 +17,6 @@ describe('index', function () {
     }`
   )
 
-
-
   def('MutationType', () => `type Mutation {
       createYetAnotherType(name: String!): YetAnotherType!
     }`
