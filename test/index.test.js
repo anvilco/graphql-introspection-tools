@@ -5,7 +5,7 @@ import IntrospectionManipulator,  {
   KIND_INPUT_OBJECT,
   KIND_UNION,
   KIND_ENUM,
-} from '../src/index'
+} from '../dist/index'
 
 import {
   introspectionResponseFromSchemaSDL,
