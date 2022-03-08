@@ -45,6 +45,9 @@ const defaultOpts = Object.freeze({
   removeArgsWithMissingTypes: true,
   removeInputFieldsWithMissingTypes: true,
   removePossibleTypesOfMissingTypes: true,
+
+  // Remove all the types and things that are unreferenced immediately?
+  cleanupSchemaImmediately: true,
 })
 
 // Map some opts to their corresponding removeType params for proper defaulting
@@ -113,6 +116,10 @@ export default class Introspection {
 
     if (this.opts.analyze) {
       this.analyze()
+    }
+
+    if (this.opts.cleanupSchemaImmediately) {
+      this._cleanSchema()
     }
   }
 
@@ -550,6 +557,8 @@ export default class Introspection {
 
   // Removes all the undefined gaps created by various removals
   _cleanSchema() {
+    // Used to compare the schema before and after it was cleaned
+    const schemaToStart = JSON.stringify(this.schema)
     const typesEncountered = new Set()
     const types = []
 
@@ -670,6 +679,12 @@ export default class Introspection {
 
     // Need to re-analyze it, too
     this.analyze()
+
+    // If the schema was changed by this cleanup, we should run it again to see if other things
+    // should be removed...and continue to do so until the schema is stable.
+    if (schemaToStart !== JSON.stringify(this.schema)) {
+      return this._cleanSchema()
+    }
   }
 
   _hasType({ kind, name }) {

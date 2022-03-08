@@ -150,6 +150,21 @@ describe('index', function () {
     type RandomTypeOne {
       fieldString: String
     }
+
+    "Should not show up because it was not used anywhere"
+    type NotUsed {
+      referencedButNotUsed: ReferencedButNotUsed
+    }
+
+    "Should not show up because the only thing that references it was not used"
+    type ReferencedButNotUsed {
+      name: String
+    }
+
+    "I am definitely not used at all"
+    type TotallyNotUsed {
+      name: String
+    }
   `
   )
   def('schemaSDL', () => $.schemaSDLBase)
@@ -187,13 +202,18 @@ describe('index', function () {
   def('schema', () => $.response.__schema)
 
   it('works', function () {
-    const introspection = new IntrospectionManipulator($.response)
+    let introspection = new IntrospectionManipulator($.response, { cleanupSchemaImmediately: false })
     let response = introspection.getResponse()
 
     //************************
     //
     // Sanity checks
     expect(isEqual($.response, response)).to.be.true
+
+    introspection = new IntrospectionManipulator($.response)
+    response = introspection.getResponse()
+    // Some cleanup occurred right away
+    expect(isEqual($.response, response)).to.not.be.true
 
     let queryType = introspection.getQueryType()
     expect(queryType).to.be.ok
@@ -209,6 +229,10 @@ describe('index', function () {
     expect(subscriptionType).to.be.ok
     expect(subscriptionType).to.eql(findType({ kind: KIND_OBJECT, name: 'Subscription', response }))
     expect(introspection.getSubscription({ name: 'subscribeToMyTypeFieldStringChanges' })).be.ok
+
+    expect(introspection.getType({ name: 'NotUsed' })).to.not.be.ok
+    expect(introspection.getType({ name: 'ReferencedButNotUsed' })).to.not.be.ok
+    expect(introspection.getType({ name: 'TotallyNotUsed' })).to.not.be.ok
 
     expect(findFieldOnType({ typeKind: KIND_OBJECT, typeName: 'MyType', fieldName: 'fieldString', response })).to.be.ok
     expect(findType({ kind: KIND_SCALAR, name: 'SecretScalar', response })).to.be.ok
