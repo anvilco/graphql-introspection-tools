@@ -4,11 +4,11 @@ module.exports = {
     node: true,
   },
   extends: [
-    "eslint:recommended",
+    'eslint:recommended',
   ],
   parserOptions: {
     ecmaVersion: 12,
-    sourceType: "module"
+    sourceType: 'module'
   },
   plugins: [
   ],

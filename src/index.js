@@ -16,14 +16,25 @@ const REMOVE_UNUSED_TYPES_DEFAULT = true
 const CLEANUP_DEFAULT = true
 
 // GraphQL constants
-export const KIND_SCALAR = 'SCALAR'
-export const KIND_OBJECT = 'OBJECT'
-export const KIND_INTERFACE = 'INTERFACE'
-export const KIND_UNION = 'UNION'
-export const KIND_ENUM = 'ENUM'
-export const KIND_INPUT_OBJECT = 'INPUT_OBJECT'
-export const KIND_LIST = 'LIST'
-export const KIND_NON_NULL = 'NON_NULL'
+const KIND_SCALAR = 'SCALAR'
+const KIND_OBJECT = 'OBJECT'
+const KIND_INTERFACE = 'INTERFACE'
+const KIND_UNION = 'UNION'
+const KIND_ENUM = 'ENUM'
+const KIND_INPUT_OBJECT = 'INPUT_OBJECT'
+const KIND_LIST = 'LIST'
+const KIND_NON_NULL = 'NON_NULL'
+
+export const KINDS = Object.freeze({
+  SCALAR: KIND_SCALAR,
+  OBJECT: KIND_OBJECT,
+  INTERFACE: KIND_INTERFACE,
+  UNION: KIND_UNION,
+  ENUM: KIND_ENUM,
+  INPUT_OBJECT: KIND_INPUT_OBJECT,
+  LIST: KIND_LIST,
+  NON_NULL: KIND_NON_NULL,
+})
 
 
 // TODO:
@@ -80,7 +91,7 @@ export function isReservedType(type) {
   return type.name.startsWith('__')
 }
 
-export default class Introspection {
+export class Microfiber {
   constructor(response, opts = {}) {
     if (!response) {
       throw new Error('No response provided!')
@@ -101,7 +112,7 @@ export default class Introspection {
   setResponse(responseIn) {
     const response = JSON.parse(JSON.stringify(responseIn))
 
-    const normalizedResponse = Introspection.normalizeIntrospectionResponse(response)
+    const normalizedResponse = Microfiber.normalizeIntrospectionResponse(response)
     if (normalizedResponse !== response) {
       this._wasNormalized = true
     }
