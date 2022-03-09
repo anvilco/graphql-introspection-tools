@@ -13,7 +13,7 @@
     "manipulate",
     "manipulator"
   ],
-  "main": "dist/index.js",
+  "main": "index.js",
   "files": [
     "package.json",
     "README.md",
