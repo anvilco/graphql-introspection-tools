@@ -2,6 +2,16 @@
   "name": "@anvilco/graphql-introspection-tools",
   "version": "0.0.5",
   "description": "A library to query and manipulate GraphQL Introspection Query results in some useful ways.",
+  "author": "Chris Newhouse",
+  "homepage": "https://github.com/anvilco/graphql-introspection-tools",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anvilco/graphql-introspection-tools.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anvilco/graphql-introspection-tools/issues"
+  },
   "keywords": [
     "graphql",
     "schema",
@@ -21,8 +31,6 @@
     "CHANGELOG.md",
     "dist/"
   ],
-  "author": "Chris Newhouse",
-  "license": "MIT",
   "engines": {
     "node": ">=8"
   },

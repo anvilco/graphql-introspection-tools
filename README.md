@@ -1,4 +1,4 @@
-<a href="https://www.useanvil.com"><img src="static/anvil.png" width="50"></a>
+<a href="https://www.useanvil.com"><img src="/static/anvil.png" width="50"></a>
 
 # Microfiber - A.K.A. GraphQL Introspection Tools
 
@@ -10,7 +10,7 @@ A library to query and manipulate GraphQL Introspection Query results in some us
 
 ## Usage
 
-Coming soon!
+Coming soon! Please avoid usage until then as things are changing rapidly.
 
 [npm]: https://badge.fury.io/js/microfiber.svg
 [npm-downloads]: https://img.shields.io/npm/dw/microfiber
