@@ -1,6 +1,6 @@
 {
   "name": "@anvilco/graphql-introspection-tools",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "A library to query and manipulate GraphQL Introspection Query results in some useful ways.",
   "keywords": [
     "graphql",
