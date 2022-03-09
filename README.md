@@ -1,4 +1,4 @@
-<a href="https://www.useanvil.com"><img src="/static/anvil.png" width="50"></a>
+<a href="https://www.useanvil.com"><img src="static/anvil.png" width="50"></a>
 
 # Microfiber - A.K.A. GraphQL Introspection Tools
 
