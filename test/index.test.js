@@ -48,6 +48,7 @@ describe('index', function () {
 
     input InputWithSecretEnum {
       string: String
+      otherString: String
       secretEnum: [SecretEnum]
     }
 
@@ -96,6 +97,9 @@ describe('index', function () {
 
       # Fields with Inputs that contain SecretScalar
       fieldWithSecretScalarInputArg(input: InputWithSecretScalar): String
+
+      # Fields with Inputs that contain SecretEnum
+      fieldWithSecretEnumInputArg(input: InputWithSecretEnum): String
 
 
       # SecretEnum stuff
@@ -200,37 +204,37 @@ describe('index', function () {
   def('schema', () => $.response.__schema)
 
   it('works', function () {
-    let introspection = new Microfiber($.response, { cleanupSchemaImmediately: false })
-    let response = introspection.getResponse()
+    let microfiber = new Microfiber($.response, { cleanupSchemaImmediately: false })
+    let response = microfiber.getResponse()
 
     //************************
     //
     // Sanity checks
     expect(isEqual($.response, response)).to.be.true
 
-    introspection = new Microfiber($.response)
-    response = introspection.getResponse()
+    microfiber = new Microfiber($.response)
+    response = microfiber.getResponse()
     // Some cleanup occurred right away
     expect(isEqual($.response, response)).to.not.be.true
 
-    let queryType = introspection.getQueryType()
+    let queryType = microfiber.getQueryType()
     expect(queryType).to.be.ok
     expect(queryType).to.eql(findType({ kind: KINDS.OBJECT, name: 'Query', response }))
-    expect(introspection.getQuery({ name: 'myTypes' })).be.ok
+    expect(microfiber.getQuery({ name: 'myTypes' })).be.ok
 
-    let mutationType = introspection.getMutationType()
+    let mutationType = microfiber.getMutationType()
     expect(mutationType).to.be.ok
     expect(mutationType).to.eql(findType({ kind: KINDS.OBJECT, name: 'Mutation', response }))
-    expect(introspection.getMutation({ name: 'createYetAnotherType' })).be.ok
+    expect(microfiber.getMutation({ name: 'createYetAnotherType' })).be.ok
 
-    let subscriptionType = introspection.getSubscriptionType()
+    let subscriptionType = microfiber.getSubscriptionType()
     expect(subscriptionType).to.be.ok
     expect(subscriptionType).to.eql(findType({ kind: KINDS.OBJECT, name: 'Subscription', response }))
-    expect(introspection.getSubscription({ name: 'subscribeToMyTypeFieldStringChanges' })).be.ok
+    expect(microfiber.getSubscription({ name: 'subscribeToMyTypeFieldStringChanges' })).be.ok
 
-    expect(introspection.getType({ name: 'NotUsed' })).to.not.be.ok
-    expect(introspection.getType({ name: 'ReferencedButNotUsed' })).to.not.be.ok
-    expect(introspection.getType({ name: 'TotallyNotUsed' })).to.not.be.ok
+    expect(microfiber.getType({ name: 'NotUsed' })).to.not.be.ok
+    expect(microfiber.getType({ name: 'ReferencedButNotUsed' })).to.not.be.ok
+    expect(microfiber.getType({ name: 'TotallyNotUsed' })).to.not.be.ok
 
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldString', response })).to.be.ok
     expect(findType({ kind: KINDS.SCALAR, name: 'SecretScalar', response })).to.be.ok
@@ -240,19 +244,39 @@ describe('index', function () {
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretScalarNonNullArray', response })).to.be.ok
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretScalarNonNullArrayOfNonNulls', response })).to.be.ok
 
-    let arg = introspection.getArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArg', argName: 'argSecretScalar', response })
+    let arg = microfiber.getArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArg', argName: 'argSecretScalar', response })
     expect(arg).to.be.ok
     expect(arg).to.eql(findArgOnFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArg', argName: 'argSecretScalar', response }))
-    arg = introspection.getArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArg', argName: 'argSecretScalar', response })
-    expect(arg).to.be.ok.to.be.ok
-    arg = introspection.getArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArrayArg', argName: 'argSecretScalar', response })
+    arg = microfiber.getArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArg', argName: 'argSecretScalar', response })
     expect(arg).to.be.ok
-    arg = introspection.getArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarNonNullArrayArg', argName: 'argSecretScalar', response })
+    arg = microfiber.getArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarArrayArg', argName: 'argSecretScalar', response })
     expect(arg).to.be.ok
-    arg = introspection.getArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarNonNullArrayOfNonNullsArg', argName: 'argSecretScalar', response })
+    arg = microfiber.getArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarNonNullArrayArg', argName: 'argSecretScalar', response })
+    expect(arg).to.be.ok
+    arg = microfiber.getArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarNonNullArrayOfNonNullsArg', argName: 'argSecretScalar', response })
     expect(arg).to.be.ok
 
-    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretScalar', inputFieldName: 'secretScalar', response })).to.be.ok
+    // Won't work because typeKind defaults to OBJECT
+    expect(microfiber.getField({ typeName: 'InputWithSecretScalar', fieldName: 'secretScalar' })).to.not.be.ok
+    // This works, though
+    expect(microfiber.getField({ typeKind: KINDS.INPUT_OBJECT, typeName: 'InputWithSecretScalar', fieldName: 'secretScalar' })).to.be.ok
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretScalar', fieldName: 'secretScalar' })).to.be.ok
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretScalar', fieldName: 'secretScalar' })).to.eql(
+      microfiber.getField({ typeKind: KINDS.INPUT_OBJECT, typeName: 'InputWithSecretScalar', fieldName: 'secretScalar' })
+    )
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretScalar', fieldName: 'secretScalar' })).to.eql(
+      findInputFieldOnInputType({ typeName: 'InputWithSecretScalar', fieldName: 'secretScalar', response })
+    )
+    expect(microfiber.getField({ typeName: 'MyType', fieldName: 'fieldWithSecretScalarInputArg' })).to.be.ok
+    expect(microfiber.getField({ typeName: 'MyType', fieldName: 'fieldWithSecretScalarInputArg' })).to.eql(
+      findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldWithSecretScalarInputArg', response })
+    )
+
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretEnum', fieldName: 'secretEnum' })).to.be.ok
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretEnum', fieldName: 'secretEnum' })).to.eql(
+      findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'secretEnum', response })
+    )
+    expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg', response })).to.be.ok
 
     //
     //
@@ -282,8 +306,8 @@ describe('index', function () {
     // OK, let's do some things
 
     // Remove SecretScalar
-    introspection.removeType({ kind: KINDS.SCALAR, name: 'SecretScalar' })
-    response = introspection.getResponse()
+    microfiber.removeType({ kind: KINDS.SCALAR, name: 'SecretScalar' })
+    response = microfiber.getResponse()
     expect(isEqual($.response, response)).to.be.false
     expect(findType({ kind: KINDS.OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Mutation', response })).to.be.ok
@@ -301,7 +325,17 @@ describe('index', function () {
     expect(findArgOnFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarNonNullArrayArg', argName: 'argSecretScalar', response })).to.not.be.ok
     expect(findArgOnFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretScalarNonNullArrayOfNonNullsArg', argName: 'argSecretScalar', response })).to.not.be.ok
 
-    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretScalar', inputFieldName: 'secretScalar', response })).to.not.be.ok
+    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretScalar', fieldName: 'secretScalar', response })).to.not.be.ok
+    expect(microfiber.getField({ typeName: 'InputWithSecretScalar', fieldName: 'secretScalar' })).to.not.be.ok
+    expect(microfiber.getField({ typeKind: KINDS.INPUT_OBJECT, typeName: 'InputWithSecretScalar', fieldName: 'secretScalar' })).to.not.be.ok
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretScalar', fieldName: 'secretScalar' })).to.not.be.ok
+    // these should still be ok
+    expect(microfiber.getField({ typeName: 'MyType', fieldName: 'fieldWithSecretScalarInputArg' })).to.be.ok
+    expect(microfiber.getField({ typeName: 'MyType', fieldName: 'fieldWithSecretScalarInputArg' })).to.eql(
+      findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldWithSecretScalarInputArg', response })
+    )
+    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'secretEnum', response })).to.be.ok
+    expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg', response })).to.be.ok
 
     // Remove a specific SecretEnum value
 
@@ -309,8 +343,8 @@ describe('index', function () {
     expect(secretEnum).to.be.ok
     expect(secretEnum.enumValues).to.be.an('array').of.length(3)
 
-    introspection.removeEnumValue({ name: 'SecretEnum', value: 'ENUM2' })
-    response = introspection.getResponse()
+    microfiber.removeEnumValue({ name: 'SecretEnum', value: 'ENUM2' })
+    response = microfiber.getResponse()
     expect(findType({ kind: KINDS.OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Mutation', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Subscription', response })).to.be.ok
@@ -333,8 +367,8 @@ describe('index', function () {
 
     // Remove SecretEnum completely
 
-    introspection.removeType({ kind: KINDS.ENUM, name: 'SecretEnum' })
-    response = introspection.getResponse()
+    microfiber.removeType({ kind: KINDS.ENUM, name: 'SecretEnum' })
+    response = microfiber.getResponse()
     expect(findType({ kind: KINDS.OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Mutation', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Subscription', response })).to.be.ok
@@ -351,11 +385,15 @@ describe('index', function () {
     expect(findArgOnFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretEnumNonNullArrayArg', argName: 'argSecretEnum', response })).to.not.be.ok
     expect(findArgOnFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldStringWithSecretEnumNonNullArrayOfNonNullsArg', argName: 'argSecretEnum', response })).to.not.be.ok
 
+    expect(microfiber.getField({ typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg' })).to.be.ok
+    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'secretEnum', response })).to.not.be.ok
+    expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg', response })).to.be.ok
+
     // Remove an Arg from a Field
 
     expect(findArgOnFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldString', argName: 'argString', response })).to.be.ok
-    introspection.removeArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldString', argName: 'argString' })
-    response = introspection.getResponse()
+    microfiber.removeArg({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldString', argName: 'argString' })
+    response = microfiber.getResponse()
     expect(findType({ kind: KINDS.OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Mutation', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Subscription', response })).to.be.ok
@@ -364,12 +402,54 @@ describe('index', function () {
     // Remove a Field from a Type
 
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldString', response })).to.be.ok
-    introspection.removeField({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldString' })
-    response = introspection.getResponse()
+    microfiber.removeField({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldString' })
+    response = microfiber.getResponse()
     expect(findType({ kind: KINDS.OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Mutation', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Subscription', response })).to.be.ok
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldString', response })).to.not.be.ok
+
+    // Remove an Input Field from an Input Object
+
+    expect(microfiber.getField({ typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg' })).to.be.ok
+    expect(microfiber.getField({ typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg' })).to.eql(
+      findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg', response })
+    )
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretEnum', fieldName: 'secretEnum' })).to.not.be.ok
+    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'secretEnum', response })).to.not.be.ok
+
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretEnum', fieldName: 'string' })).to.be.ok
+    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'string', response })).to.be.ok
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretEnum', fieldName: 'otherString' })).to.be.ok
+    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'otherString', response })).to.be.ok
+
+    // This won't work due to typeKind defaulting to OBJECT
+    microfiber.removeField({ typeName: 'InputWithSecretEnum', fieldName: 'string' })
+    response = microfiber.getResponse()
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretEnum', fieldName: 'string' })).to.be.ok
+    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'string', response })).to.be.ok
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretEnum', fieldName: 'otherString' })).to.be.ok
+    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'otherString', response })).to.be.ok
+
+    // But this will work...
+    microfiber.removeField({ typeKind: KINDS.INPUT_OBJECT, typeName: 'InputWithSecretEnum', fieldName: 'string' })
+    response = microfiber.getResponse()
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretEnum', fieldName: 'string' })).to.not.be.ok
+    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'string', response })).to.not.be.ok
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretEnum', fieldName: 'otherString' })).to.be.ok
+    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'otherString', response })).to.be.ok
+
+    microfiber.removeInputField({ typeName: 'InputWithSecretEnum', fieldName: 'otherString' })
+    response = microfiber.getResponse()
+    expect(microfiber.getInputField({ typeName: 'InputWithSecretEnum', fieldName: 'otherString' })).to.not.be.ok
+    expect(findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'otherString', response })).to.not.be.ok
+
+    expect(microfiber.getField({ typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg' })).to.be.ok
+    expect(microfiber.getField({ typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg' })).to.eql(
+      findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg', response })
+    )
+
+    // Remove in Input Type completely
 
     // Remove possible type from a Union Type
 
@@ -382,13 +462,16 @@ describe('index', function () {
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretUnionNonNullArray', response })).to.be.ok
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretUnionNonNullArrayOfNonNulls', response })).to.be.ok
 
-    introspection.removePossibleTypesOfType({ kind: KINDS.OBJECT, name: 'MyType' })
-    response = introspection.getResponse()
+    microfiber.removePossibleType({ typeName: 'SecretUnion', possibleTypeKind: KINDS.OBJECT, possibleTypeName: 'MyType' })
+    response = microfiber.getResponse()
     expect(findType({ kind: KINDS.OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Mutation', response })).to.be.ok
 
-    unionType = findType({ kind: KINDS.UNION, name: 'SecretUnion', response })
+    unionType = microfiber.getType({ kind: KINDS.UNION, name: 'SecretUnion' })
     expect(unionType).to.be.ok
+    expect(unionType).to.eql(
+      findType({ kind: KINDS.UNION, name: 'SecretUnion', response })
+    )
     expect(unionType.possibleTypes).to.be.an('array').of.length(1)
     // Only MyOtherType is left
     expect(unionType.possibleTypes.map((possibleType) => possibleType.name)).to.eql(['MyOtherType'])
@@ -400,8 +483,8 @@ describe('index', function () {
 
     // Remove a Union Type completely
 
-    introspection.removeType({ kind: KINDS.UNION, name: 'SecretUnion' })
-    response = introspection.getResponse()
+    microfiber.removeType({ kind: KINDS.UNION, name: 'SecretUnion' })
+    response = microfiber.getResponse()
     expect(findType({ kind: KINDS.OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Mutation', response })).to.be.ok
 
@@ -416,8 +499,8 @@ describe('index', function () {
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'Query', fieldName: 'myTypes', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'MyType', response })).to.be.ok
 
-    introspection.removeQuery({ name: 'myTypes' })
-    response = introspection.getResponse()
+    microfiber.removeQuery({ name: 'myTypes' })
+    response = microfiber.getResponse()
 
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'Query', fieldName: 'myTypes', response })).to.not.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'MyType', response })).to.not.be.ok
@@ -428,8 +511,8 @@ describe('index', function () {
     expect(findType({ kind: KINDS.OBJECT, name: 'YetAnotherType', response })).to.be.ok
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'Mutation', fieldName: 'createYetAnotherType', response })).to.be.ok
 
-    introspection.removeType({ kind: KINDS.OBJECT, name: 'YetAnotherType' })
-    response = introspection.getResponse()
+    microfiber.removeType({ kind: KINDS.OBJECT, name: 'YetAnotherType' })
+    response = microfiber.getResponse()
 
     expect(findType({ kind: KINDS.OBJECT, name: 'YetAnotherType', response })).to.not.be.ok
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'Mutation', fieldName: 'createYetAnotherType', response })).to.not.be.ok
@@ -443,8 +526,8 @@ describe('index', function () {
     expect(findType({ kind: KINDS.OBJECT, name: 'RandomTypeOne', response })).to.be.ok
 
     // Remove them, and make sure they're not there
-    introspection.removeSubscription({ name: 'subscribeToMyTypeFieldStringChanges' })
-    response = introspection.getResponse()
+    microfiber.removeSubscription({ name: 'subscribeToMyTypeFieldStringChanges' })
+    response = microfiber.getResponse()
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'Subscription', fieldName: 'subscribeToMyTypeFieldStringChanges', response })).to.not.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'RandomTypeOne', response })).to.not.be.ok
 
@@ -475,11 +558,11 @@ function findArgOnFieldOnType({ typeKind, typeName, fieldName, argName, response
   return (field.args || []).find((arg) => arg.name === argName)
 }
 
-function findInputFieldOnInputType({ typeName, inputFieldName, response }) {
+function findInputFieldOnInputType({ typeName, fieldName, response }) {
   const type = findType({ kind: KINDS.INPUT_OBJECT, name: typeName, response })
   if (!type) {
     return false
   }
 
-  return (type.inputFields || []).find((inputField => inputField.name === inputFieldName ))
+  return (type.inputFields || []).find((inputField => inputField.name === fieldName ))
 }
