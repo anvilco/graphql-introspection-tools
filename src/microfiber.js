@@ -7,33 +7,28 @@ import {
   typesAreSame,
 } from './etc'
 
-// Constructor Options
-const ANALYZE_DEFAULT = true
-const NORMALIZE_DEFAULT = true
-const FIX_QUERY_MUTATION_TYPES_DEFAULT = true
-const REMOVE_UNUSED_TYPES_DEFAULT = true
-
-// Method options
-// const REMOVE_FIELDS_OF_TYPE_DEFAULT = true
-// const REMOVE_INPUT_FIELDS_OF_TYPE_DEFAULT = true
-// const REMOVE_POSSIBLE_TYPES_OF_TYPE_DEFAULT = true
-// const REMOVE_ARGS_OF_TYPE_DEFAULT = true
-const CLEANUP_DEFAULT = true
-
 
 // TODO:
 //
 // interfaces
 //
+// remove types that have no fields/inputFields/possibleTypes
+//
 // optimize to only clean if "dirty" and when pulling schema out
 
 const defaultOpts = Object.freeze({
-  analyze: ANALYZE_DEFAULT,
-  normalize: NORMALIZE_DEFAULT,
-  fixQueryAndMutationTypes: FIX_QUERY_MUTATION_TYPES_DEFAULT,
+  // Perform an analysis of the schema right away.
+  _analyze: true,
+  // Perform some normalization of the Introspection Query Results
+  _normalize: true,
+
+  // Some GraphQL implementations have non-standard Query, Mutation and/or Subscription
+  // type names. This option will fix them if they're messed up in the Introspection Query
+  // Results
+  fixQueryAndMutationAndSubscriptionTypes: true,
 
   // Remove Types that are not referenced anywhere by anything
-  removeUnusedTypes: REMOVE_UNUSED_TYPES_DEFAULT,
+  removeUnusedTypes: true,
 
   // Remove things whose Types are not found due to being removed
   removeFieldsWithMissingTypes: true,
@@ -47,10 +42,6 @@ const defaultOpts = Object.freeze({
 
 // Map some opts to their corresponding removeType params for proper defaulting
 const optsToRemoveTypeParamsMap = Object.freeze({
-  // removeFieldsOfType: 'removeFieldsWithMissingTypes',
-  // removeArgsOfType: 'removeArgsWithMissingTypes',
-  // removeInputFieldsOfType: 'removeInputFieldsWithMissingTypes',
-  // removePossibleTypesOfType: 'removePossibleTypesOfMissingTypes',
   removeFieldsWithMissingTypes: 'removeFieldsOfType',
   removeArgsWithMissingTypes: 'removeArgsOfType',
   removeInputFieldsWithMissingTypes: 'removeInputFieldsOfType',
@@ -63,37 +54,6 @@ const kindToFieldPropertyMap = Object.freeze({
   [KINDS.INPUT_OBJECT]: 'inputFields',
   // [KINDS.INTERFACE]: 'interfaces',
 })
-
-export function digUnderlyingType(type) {
-  while ([KINDS.NON_NULL, KINDS.LIST].includes(type.kind)) {
-    type = type.ofType
-  }
-  return type
-}
-
-export function isReservedType(type) {
-  return type.name.startsWith('__')
-}
-
-function buildKey({ kind, name }) {
-  return kind + ':' + name
-}
-
-function isUndef(item) {
-  return typeof item === 'undefined'
-}
-
-function mapProps({ props, map }) {
-  return Object.entries(map).reduce(
-    (acc, [from, to]) => {
-      if (Object.prototype.hasOwnProperty.call(props, from)) {
-        acc[to] = props[to]
-      }
-      return acc
-    },
-    {},
-  )
-}
 
 export class Microfiber {
   constructor(response, opts = {}) {
@@ -116,153 +76,33 @@ export class Microfiber {
   setResponse(responseIn) {
     const response = JSON.parse(JSON.stringify(responseIn))
 
-    const normalizedResponse = Microfiber.normalizeIntrospectionResponse(response)
-    if (normalizedResponse !== response) {
-      this._wasNormalized = true
+    if (this.opts._normalize) {
+      const normalizedResponse = Microfiber.normalizeIntrospectionResponse(response)
+      if (normalizedResponse !== response) {
+        this._wasNormalized = true
+      }
+      this.schema = get(normalizedResponse, '__schema')
+    } else {
+      this.schema = response
     }
-    this.schema = get(normalizedResponse, '__schema')
 
-    if (this.opts.fixQueryAndMutationTypes) {
-      this.fixQueryAndMutationTypes()
+    if (this.opts.fixQueryAndMutationAndSubscriptionTypes) {
+      this._fixQueryAndMutationAndSubscriptionTypes()
     }
 
     // OK, time to validate
-    this.validate()
+    this._validate()
 
-    if (this.opts.analyze) {
-      this.analyze()
+    if (this.opts._analyze) {
+      this._analyze()
     }
 
     if (this.opts.cleanupSchemaImmediately) {
-      this._cleanSchema()
+      this.cleanSchema()
     }
   }
 
-  static normalizeIntrospectionResponse(response) {
-    if (response && response.data) {
-      return response.data
-    }
-
-    return response
-  }
-
-  static digUnderlyingType(type) {
-    return digUnderlyingType(type)
-  }
-
-  validate() {
-    if (!this.schema) {
-      throw new Error('No schema property detected!')
-    }
-
-    if (!this.schema.types) {
-      throw new Error('No types detected!')
-    }
-
-    // Must have a Query type...but not necessarily a Mutation type
-    if (!get(this.schema, `queryType.name`)) {
-      throw new Error(`No queryType detected!`)
-    }
-  }
-
-  analyze() {
-    // Map the kind + name to the index in the types array
-    this.typeToIndexMap = {}
-    this.fieldsOfTypeMap = {}
-    this.inputFieldsOfTypeMap = {}
-    // AKA Unions
-    this.possibleTypesOfTypeMap = {}
-    this.argsOfTypeMap = {}
-
-    // Need to keep track of these so that we never remove them for not being referenced
-    this.queryTypeName = get(this.schema, 'queryType.name')
-    this.mutationTypeName = get(this.schema, 'mutationType.name')
-    this.subscriptionTypeName = get(this.schema, 'subscriptionType.name')
-
-    for (let typesIdx = 0; typesIdx < this.schema.types.length; typesIdx++) {
-      const type = this.schema.types[typesIdx]
-      if (isUndef(type)) {
-        continue
-      }
-
-      const {
-        kind,
-        name,
-      } = type
-      // These come in as null, not undefined
-      const fields = type.fields || []
-      const inputFields = type.inputFields || []
-      const possibleTypes = type.possibleTypes || []
-
-      const typesKey = buildKey({ kind, name })
-      this.typeToIndexMap[typesKey] = typesIdx
-
-      for (let fieldsIdx = 0; fieldsIdx < fields.length; fieldsIdx++) {
-        const field = fields[fieldsIdx]
-        if (isUndef(field)) {
-          continue
-        }
-
-        const fieldType = digUnderlyingType(field.type)
-        // This should always be arrays...maybe empty, never null
-        const args = field.args || []
-
-        const fieldsKey = buildKey(fieldType)
-        if (!this.fieldsOfTypeMap[fieldsKey]) {
-          this.fieldsOfTypeMap[fieldsKey] = []
-        }
-
-        const fieldPath = `types.${typesIdx}.fields.${fieldsIdx}`
-        this.fieldsOfTypeMap[fieldsKey].push(fieldPath)
-
-        for (let argsIdx = 0; argsIdx < args.length; argsIdx++) {
-          const arg = args[argsIdx]
-          if (isUndef(arg)) {
-            continue
-          }
-          const argType = digUnderlyingType(arg.type)
-
-          const argsKey = buildKey(argType)
-          if (!this.argsOfTypeMap[argsKey]) {
-            this.argsOfTypeMap[argsKey] = []
-          }
-
-          const argPath = `${fieldPath}.args.${argsIdx}`
-          this.argsOfTypeMap[argsKey].push(argPath)
-        }
-      }
-
-      for (let inputFieldsIdx = 0; inputFieldsIdx < inputFields.length; inputFieldsIdx++) {
-        const inputField = inputFields[inputFieldsIdx]
-        if (isUndef(inputField)) {
-          continue
-        }
-        const inputFieldType = digUnderlyingType(inputField.type)
-        const inputFieldsKey = buildKey(inputFieldType)
-        if (!this.inputFieldsOfTypeMap[inputFieldsKey]) {
-          this.inputFieldsOfTypeMap[inputFieldsKey] = []
-        }
-        const inputFieldPath = `types.${typesIdx}.inputFields.${inputFieldsIdx}`
-        this.inputFieldsOfTypeMap[inputFieldsKey].push(inputFieldPath)
-      }
-
-      for (let possibleTypesIdx = 0; possibleTypesIdx < possibleTypes.length; possibleTypesIdx++) {
-        const possibleType = possibleTypes[possibleTypesIdx]
-        if (isUndef(possibleType)) {
-          continue
-        }
-
-        const possibleTypeType = digUnderlyingType(possibleType)
-        const possibleTypeKey = buildKey(possibleTypeType)
-        if (!this.possibleTypesOfTypeMap[possibleTypeKey]) {
-          this.possibleTypesOfTypeMap[possibleTypeKey] = []
-        }
-        const possibleTypePath = `types.${typesIdx}.possibleTypes.${possibleTypesIdx}`
-        this.possibleTypesOfTypeMap[possibleTypeKey].push(possibleTypePath)
-      }
-    }
-  }
-
+  // This is how you get OUT what you've put in and manipulated
   getResponse() {
     const clonedResponse = {
       __schema: this._cloneSchema()
@@ -277,11 +117,28 @@ export class Microfiber {
     return clonedResponse
   }
 
-  getType({ kind = KINDS.OBJECT, name }) {
-    return this.schema.types[this.getTypeIndex({ kind, name })]
+  static normalizeIntrospectionResponse(response) {
+    if (response && response.data) {
+      return response.data
+    }
+
+    return response
   }
 
-  getAllTypes({ includeReserved = false, includeQuery = false, includeMutation = false, includeSubscription = false } = {}) {
+  static digUnderlyingType(type) {
+    return digUnderlyingType(type)
+  }
+
+  getAllTypes({
+    // Include reserved GraphQL types?
+    includeReserved = false,
+    // Include the Query type?
+    includeQuery = false,
+    // Include the Mutation type?
+    includeMutation = false,
+    // Include the Subscription type?
+    includeSubscription = false,
+  }) {
     const queryType = this.getQueryType()
     const mutationType = this.getMutationType()
     const subscriptionType = this.getSubscriptionType()
@@ -305,13 +162,8 @@ export class Microfiber {
     })
   }
 
-  getTypeIndex({ kind, name }) {
-    const key = buildKey({ kind, name })
-    if (Object.prototype.hasOwnProperty.call(this.typeToIndexMap, key)) {
-      return this.typeToIndexMap[key]
-    }
-
-    return false
+  getType({ kind = KINDS.OBJECT, name }) {
+    return this.schema.types[this._getTypeIndex({ kind, name })]
   }
 
   getQueryType() {
@@ -382,7 +234,7 @@ export class Microfiber {
     return this.getField({ typeKind: KINDS.INPUT_OBJECT, typeName, fieldName })
   }
 
-  getArg({ typeKind, typeName, fieldName, argName }) {
+  getArg({ typeKind = KINDS.OBJECT, typeName, fieldName, argName }) {
     const field = this.getField({ typeKind, typeName, fieldName })
     if (!(field && field.args.length)) {
       return
@@ -391,23 +243,16 @@ export class Microfiber {
     return field.args.find((arg) => arg.name === argName)
   }
 
-  fixQueryAndMutationTypes(response) {
-    for (const [key, defaultTypeName] of [['queryType', 'Query'], ['mutationType', 'Mutation']]) {
-      const queryOrMutationTypeName = get(response, `__schema.${key}.name`)
-      if (queryOrMutationTypeName && !this.getType({ kind: KINDS.OBJECT, name: queryOrMutationTypeName })) {
-        this.schema[key] = { name: defaultTypeName }
-      }
-    }
-  }
-
   removeType({
     kind = KINDS.OBJECT,
     name,
+    // Clean up the schema afterwards?
+    cleanup = true,
+    // Remove occurances of this Type from other places?
     removeFieldsOfType,
     removeInputFieldsOfType,
     removePossibleTypesOfType,
     removeArgsOfType,
-    cleanup = CLEANUP_DEFAULT,
   }) {
     const typeKey = buildKey({ kind, name })
     if (!Object.prototype.hasOwnProperty.call(this.typeToIndexMap, typeKey)) {
@@ -443,24 +288,24 @@ export class Microfiber {
       delete this.typeToIndexMap[typeKey]
 
       if (mergedOpts.removeArgsOfType) {
-        this.removeArgumentsOfType({ kind, name, cleanup: shouldOthersClean })
+        this._removeArgumentsOfType({ kind, name, cleanup: shouldOthersClean })
       }
 
       if (mergedOpts.removeFieldsOfType) {
-        this.removeFieldsOfType({ kind, name, cleanup: shouldOthersClean })
+        this._removeFieldsOfType({ kind, name, cleanup: shouldOthersClean })
       }
 
       if (mergedOpts.removeInputFieldsOfType) {
-        this.removeInputFieldsOfType({ kind, name, cleanup: shouldOthersClean })
+        this._removeInputFieldsOfType({ kind, name, cleanup: shouldOthersClean })
       }
 
       // AKA Unions
       if (mergedOpts.removePossibleTypesOfType) {
-        this.removePossibleTypesOfType({ kind, name, cleanup: shouldOthersClean })
+        this._removePossibleTypesOfType({ kind, name, cleanup: shouldOthersClean })
       }
 
       if (cleanup) {
-        this._cleanSchema()
+        this.cleanSchema()
       }
 
       return true
@@ -470,7 +315,13 @@ export class Microfiber {
     }
   }
 
-  removeField({ typeKind, typeName, fieldName, cleanup = CLEANUP_DEFAULT }) {
+  removeField({
+    typeKind = KINDS.OBJECT,
+    typeName,
+    fieldName,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
     const type = this.getType({ kind: typeKind, name: typeName })
     if (!type) {
       return false
@@ -485,15 +336,27 @@ export class Microfiber {
     type[fieldsProperty] = type[fieldsProperty].filter((field) => field.name !== fieldName)
 
     if (cleanup) {
-      this._cleanSchema()
+      this.cleanSchema()
     }
   }
 
-  removeInputField({ typeName, fieldName }) {
-    return this.removeField({ typeKind: KINDS.INPUT_OBJECT, typeName, fieldName })
+  removeInputField({
+    typeName,
+    fieldName,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
+    return this.removeField({ typeKind: KINDS.INPUT_OBJECT, typeName, fieldName, cleanup })
   }
 
-  removeArg({ typeKind, typeName, fieldName, argName, cleanup = CLEANUP_DEFAULT }) {
+  removeArg({
+    typeKind,
+    typeName,
+    fieldName,
+    argName,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
     const field = this.getField({ typeKind, typeName, fieldName })
     // field.args should alwys be an array, never null
     if (!field) {
@@ -504,53 +367,17 @@ export class Microfiber {
     field.args = field.args.filter((arg) => arg.name !== argName)
 
     if (cleanup) {
-      this._cleanSchema()
+      this.cleanSchema()
     }
-  }
-
-  removeQuery({ name, cleanup = CLEANUP_DEFAULT }) {
-    if (!this.queryTypeName) {
-      return false
-    }
-
-    this.removeField({ typeKind: KINDS.OBJECT, typeName: this.queryTypeName, fieldName: name, cleanup })
-  }
-
-  removeMutation({ name, cleanup = CLEANUP_DEFAULT }) {
-    if (!this.mutationTypeName) {
-      return false
-    }
-
-    this.removeField({ typeKind: KINDS.OBJECT, typeName: this.mutationTypeName, fieldName: name, cleanup })
-  }
-
-  removeSubscription({ name, cleanup = CLEANUP_DEFAULT }) {
-    if (!this.subscriptionTypeName) {
-      return false
-    }
-
-    this.removeField({ typeKind: KINDS.OBJECT, typeName: this.subscriptionTypeName, fieldName: name, cleanup })
-  }
-
-  removeFieldsOfType({ kind, name, cleanup = CLEANUP_DEFAULT }) {
-    return this._removeThingsOfType({ kind, name, map: this.fieldsOfTypeMap, cleanup })
-  }
-
-  removeInputFieldsOfType({ kind, name, cleanup = CLEANUP_DEFAULT }) {
-    return this._removeThingsOfType({ kind, name, map: this.inputFieldsOfTypeMap, cleanup })
-  }
-
-  // AKA Unions
-  removePossibleTypesOfType({ kind, name, cleanup = CLEANUP_DEFAULT }) {
-    return this._removeThingsOfType({ kind, name, map: this.possibleTypesOfTypeMap, cleanup })
-  }
-
-  removeArgumentsOfType({ kind, name, cleanup = CLEANUP_DEFAULT }) {
-    return this._removeThingsOfType({ kind, name, map: this.argsOfTypeMap, cleanup })
   }
 
   // Remove just a single possible value for an Enum, but not the whole Enum
-  removeEnumValue({ name, value }) {
+  removeEnumValue({
+    // The name of the Enum Type
+    name,
+    // The Enum value you want to remove
+    value,
+  }) {
     const type = this.getType({ kind: KINDS.ENUM, name })
     if (!(type && type.enumValues)) {
       return false
@@ -559,28 +386,65 @@ export class Microfiber {
     type.enumValues = type.enumValues.filter((enumValue) => enumValue.name !== value)
   }
 
-  // private
-
-  _removeThingsOfType({ kind, name, map, cleanup = CLEANUP_DEFAULT }) {
-    const key = buildKey({ kind, name })
-    for (const path of (map[key] || [])) {
-      unset(this.schema, path)
+  removePossibleType({
+    // The name of the Union Type
+    typeName,
+    // The Kind of the possible Type you want to remove
+    possibleTypeKind,
+    // The name of the possible Type you want to remove
+    possibleTypeName,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
+    const type = this.getType({ kind: KINDS.UNION, name: typeName })
+    if (!(type && type.possibleTypes)) {
+      return false
     }
 
-    delete map[key]
-
+    type.possibleTypes = type.possibleTypes.filter((possibleType) => possibleType.type !== possibleTypeKind && possibleType.name !== possibleTypeName)
     if (cleanup) {
-      this._cleanSchema()
+      this.cleanSchema()
     }
-
   }
 
-  _cloneSchema() {
-    return JSON.parse(JSON.stringify(this.schema))
+  removeQuery({
+    name,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
+    if (!this.queryTypeName) {
+      return false
+    }
+
+    this.removeField({ typeKind: KINDS.OBJECT, typeName: this.queryTypeName, fieldName: name, cleanup })
+  }
+
+  removeMutation({
+    name,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
+    if (!this.mutationTypeName) {
+      return false
+    }
+
+    this.removeField({ typeKind: KINDS.OBJECT, typeName: this.mutationTypeName, fieldName: name, cleanup })
+  }
+
+  removeSubscription({
+    name,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
+    if (!this.subscriptionTypeName) {
+      return false
+    }
+
+    this.removeField({ typeKind: KINDS.OBJECT, typeName: this.subscriptionTypeName, fieldName: name, cleanup })
   }
 
   // Removes all the undefined gaps created by various removals
-  _cleanSchema() {
+  cleanSchema() {
     // Used to compare the schema before and after it was cleaned
     const schemaToStart = JSON.stringify(this.schema)
     const typesEncountered = new Set()
@@ -702,17 +566,242 @@ export class Microfiber {
     }
 
     // Need to re-analyze it, too
-    this.analyze()
+    this._analyze()
 
     // If the schema was changed by this cleanup, we should run it again to see if other things
     // should be removed...and continue to do so until the schema is stable.
     if (schemaToStart !== JSON.stringify(this.schema)) {
-      return this._cleanSchema()
+      return this.cleanSchema()
     }
+  }
+
+  //******************************************************************
+  //
+  //
+  // PRIVATE
+  //
+  //
+
+  _validate() {
+    if (!this.schema) {
+      throw new Error('No schema property detected!')
+    }
+
+    if (!this.schema.types) {
+      throw new Error('No types detected!')
+    }
+
+    // Must have a Query type...but not necessarily a Mutation type
+    if (!get(this.schema, `queryType.name`)) {
+      throw new Error(`No queryType detected!`)
+    }
+  }
+
+  _analyze() {
+    // Map the kind + name to the index in the types array
+    this.typeToIndexMap = {}
+    this.fieldsOfTypeMap = {}
+    this.inputFieldsOfTypeMap = {}
+    // AKA Unions
+    this.possibleTypesOfTypeMap = {}
+    this.argsOfTypeMap = {}
+
+    // Need to keep track of these so that we never remove them for not being referenced
+    this.queryTypeName = get(this.schema, 'queryType.name')
+    this.mutationTypeName = get(this.schema, 'mutationType.name')
+    this.subscriptionTypeName = get(this.schema, 'subscriptionType.name')
+
+    for (let typesIdx = 0; typesIdx < this.schema.types.length; typesIdx++) {
+      const type = this.schema.types[typesIdx]
+      if (isUndef(type)) {
+        continue
+      }
+
+      const {
+        kind,
+        name,
+      } = type
+      // These come in as null, not undefined
+      const fields = type.fields || []
+      const inputFields = type.inputFields || []
+      const possibleTypes = type.possibleTypes || []
+
+      const typesKey = buildKey({ kind, name })
+      this.typeToIndexMap[typesKey] = typesIdx
+
+      for (let fieldsIdx = 0; fieldsIdx < fields.length; fieldsIdx++) {
+        const field = fields[fieldsIdx]
+        if (isUndef(field)) {
+          continue
+        }
+
+        const fieldType = digUnderlyingType(field.type)
+        // This should always be arrays...maybe empty, never null
+        const args = field.args || []
+
+        const fieldsKey = buildKey(fieldType)
+        if (!this.fieldsOfTypeMap[fieldsKey]) {
+          this.fieldsOfTypeMap[fieldsKey] = []
+        }
+
+        const fieldPath = `types.${typesIdx}.fields.${fieldsIdx}`
+        this.fieldsOfTypeMap[fieldsKey].push(fieldPath)
+
+        for (let argsIdx = 0; argsIdx < args.length; argsIdx++) {
+          const arg = args[argsIdx]
+          if (isUndef(arg)) {
+            continue
+          }
+          const argType = digUnderlyingType(arg.type)
+
+          const argsKey = buildKey(argType)
+          if (!this.argsOfTypeMap[argsKey]) {
+            this.argsOfTypeMap[argsKey] = []
+          }
+
+          const argPath = `${fieldPath}.args.${argsIdx}`
+          this.argsOfTypeMap[argsKey].push(argPath)
+        }
+      }
+
+      for (let inputFieldsIdx = 0; inputFieldsIdx < inputFields.length; inputFieldsIdx++) {
+        const inputField = inputFields[inputFieldsIdx]
+        if (isUndef(inputField)) {
+          continue
+        }
+        const inputFieldType = digUnderlyingType(inputField.type)
+        const inputFieldsKey = buildKey(inputFieldType)
+        if (!this.inputFieldsOfTypeMap[inputFieldsKey]) {
+          this.inputFieldsOfTypeMap[inputFieldsKey] = []
+        }
+        const inputFieldPath = `types.${typesIdx}.inputFields.${inputFieldsIdx}`
+        this.inputFieldsOfTypeMap[inputFieldsKey].push(inputFieldPath)
+      }
+
+      for (let possibleTypesIdx = 0; possibleTypesIdx < possibleTypes.length; possibleTypesIdx++) {
+        const possibleType = possibleTypes[possibleTypesIdx]
+        if (isUndef(possibleType)) {
+          continue
+        }
+
+        const possibleTypeType = digUnderlyingType(possibleType)
+        const possibleTypeKey = buildKey(possibleTypeType)
+        if (!this.possibleTypesOfTypeMap[possibleTypeKey]) {
+          this.possibleTypesOfTypeMap[possibleTypeKey] = []
+        }
+        const possibleTypePath = `types.${typesIdx}.possibleTypes.${possibleTypesIdx}`
+        this.possibleTypesOfTypeMap[possibleTypeKey].push(possibleTypePath)
+      }
+    }
+  }
+
+  _fixQueryAndMutationAndSubscriptionTypes(response) {
+    for (const [key, defaultTypeName] of [['queryType', 'Query'], ['mutationType', 'Mutation'], ['subscriptionType', 'Subscription']]) {
+      const queryOrMutationOrSubscriptionTypeName = get(response, `__schema.${key}.name`)
+      if (queryOrMutationOrSubscriptionTypeName && !this.getType({ kind: KINDS.OBJECT, name: queryOrMutationOrSubscriptionTypeName })) {
+        this.schema[key] = { name: defaultTypeName }
+      }
+    }
+  }
+
+  _getTypeIndex({ kind, name }) {
+    const key = buildKey({ kind, name })
+    if (Object.prototype.hasOwnProperty.call(this.typeToIndexMap, key)) {
+      return this.typeToIndexMap[key]
+    }
+
+    return false
+  }
+
+  _removeThingsOfType({ kind, name, map, cleanup = true }) {
+    const key = buildKey({ kind, name })
+    for (const path of (map[key] || [])) {
+      unset(this.schema, path)
+    }
+
+    delete map[key]
+
+    if (cleanup) {
+      this.cleanSchema()
+    }
+  }
+
+  _removeFieldsOfType({
+    kind,
+    name,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
+    return this._removeThingsOfType({ kind, name, map: this.fieldsOfTypeMap, cleanup })
+  }
+
+  _removeInputFieldsOfType({
+    kind,
+    name,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
+    return this._removeThingsOfType({ kind, name, map: this.inputFieldsOfTypeMap, cleanup })
+  }
+
+  // AKA Unions
+  _removePossibleTypesOfType({
+    kind,
+    name,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
+    return this._removeThingsOfType({ kind, name, map: this.possibleTypesOfTypeMap, cleanup })
+  }
+
+  _removeArgumentsOfType({
+    kind,
+    name,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
+    return this._removeThingsOfType({ kind, name, map: this.argsOfTypeMap, cleanup })
+  }
+
+  _cloneSchema() {
+    return JSON.parse(JSON.stringify(this.schema))
   }
 
   _hasType({ kind, name }) {
     const key = buildKey({ kind, name })
     return Object.prototype.hasOwnProperty.call(this.typeToIndexMap, key)
   }
+}
+
+// A function that digs through any Non-Null and List nesting and returns the underlying Type
+export function digUnderlyingType(type) {
+  while ([KINDS.NON_NULL, KINDS.LIST].includes(type.kind)) {
+    type = type.ofType
+  }
+  return type
+}
+
+// A function that returns a Boolean indicating whether a Type is special GraphQL reserved Type.
+export function isReservedType(type) {
+  return type.name.startsWith('__')
+}
+
+function buildKey({ kind, name }) {
+  return kind + ':' + name
+}
+
+function isUndef(item) {
+  return typeof item === 'undefined'
+}
+
+function mapProps({ props, map }) {
+  return Object.entries(map).reduce(
+    (acc, [from, to]) => {
+      if (Object.prototype.hasOwnProperty.call(props, from)) {
+        acc[to] = props[from]
+      }
+      return acc
+    },
+    {},
+  )
 }

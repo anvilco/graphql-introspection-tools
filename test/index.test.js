@@ -449,8 +449,6 @@ describe('index', function () {
       findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg', response })
     )
 
-
-
     // Remove in Input Type completely
 
     // Remove possible type from a Union Type
@@ -464,13 +462,16 @@ describe('index', function () {
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretUnionNonNullArray', response })).to.be.ok
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretUnionNonNullArrayOfNonNulls', response })).to.be.ok
 
-    microfiber.removePossibleTypesOfType({ kind: KINDS.OBJECT, name: 'MyType' })
+    microfiber.removePossibleType({ typeName: 'SecretUnion', possibleTypeKind: KINDS.OBJECT, possibleTypeName: 'MyType' })
     response = microfiber.getResponse()
     expect(findType({ kind: KINDS.OBJECT, name: 'Query', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'Mutation', response })).to.be.ok
 
-    unionType = findType({ kind: KINDS.UNION, name: 'SecretUnion', response })
+    unionType = microfiber.getType({ kind: KINDS.UNION, name: 'SecretUnion' })
     expect(unionType).to.be.ok
+    expect(unionType).to.eql(
+      findType({ kind: KINDS.UNION, name: 'SecretUnion', response })
+    )
     expect(unionType.possibleTypes).to.be.an('array').of.length(1)
     // Only MyOtherType is left
     expect(unionType.possibleTypes.map((possibleType) => possibleType.name)).to.eql(['MyOtherType'])
