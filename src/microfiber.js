@@ -773,7 +773,7 @@ export class Microfiber {
   }
 }
 
-// A function that digs through any Non-Null and List nesting and returns the underlying Type
+// A function that digs through any Non-Null and List nesting and returns the underlying Type.
 export function digUnderlyingType(type) {
   while ([KINDS.NON_NULL, KINDS.LIST].includes(type.kind)) {
     type = type.ofType

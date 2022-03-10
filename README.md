@@ -12,6 +12,12 @@ How about:
 - Removing a specific Query, Mutation, Type, Field/InputField, Argument or Subscription from your Introspection Query Results.
 - Removing Queries, Mutations, Fields/InputFields or Arguments that refer to Type that does not exist in - or has been removed from - your Introspection Query Results.
 
+Yay!
+
+It's called `microfiber` because it is heavily used to do the cleaning and manipulation in [SpectaQL][spectaql]...it *cleans* the *spectacles*, get it?!
+
+But, we also wanted to have a more intuitive, literal name so that people could find it. Hence it's also known as `@anvilco/graphql-introspection-tools`.
+
 ## Getting Started
 
 1. Install `microfiber`  
@@ -24,11 +30,12 @@ yarn add microfiber
 2. Clean your GraphQL Introspection Query Results
 ```node
 import { Microfiber } from 'microfiber'
-import introspectionQueryResults from 'path/to/introspection-query-results.js'
+
+const introspectionQueryResults = {...}
 
 const microfiber = new Microfiber(introspectionQueryResults)
 
-// ...do some things to your schema
+// ...do some things to your schema with `microfiber`
 
 const cleanedIntrospectonQueryResults = microfiber.getResponse()
 
@@ -305,7 +312,7 @@ typesAreSame(typeA, typeA) // true
 ```
 ---
 #### digUnderlyingType
-A function that digs through any Non-Null and List nesting and returns the underlying Type
+A function that digs through any Non-Null and List nesting and returns the underlying Type.
 ```node
 import { digUnderlyingType } from 'microfiber'
 
@@ -340,3 +347,4 @@ isReservedType(reservedType) // true
 [npm]: https://badge.fury.io/js/microfiber.svg
 [npm-downloads]: https://img.shields.io/npm/dw/microfiber
 [npm-url]: https://www.npmjs.com/package/microfiber
+[spectaql]: https://github.com/anvilco/spectaql
