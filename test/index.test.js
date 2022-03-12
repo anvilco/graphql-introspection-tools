@@ -443,6 +443,10 @@ describe('index', function () {
     response = microfiber.getResponse()
     expect(microfiber.getInputField({ typeName: 'InputWithSecretEnum', fieldName: 'otherString' })).to.not.be.ok
     expect(findInputFieldOnInputType({ typeName: 'InputWithSecretEnum', fieldName: 'otherString', response })).to.not.be.ok
+    // That's the last of the inputFields...so it should be empty and not null
+    expect(microfiber.getType({ kind: KINDS.INPUT_OBJECT, name: 'InputWithSecretEnum' })).to.be.ok
+    expect(microfiber.getType({ kind: KINDS.INPUT_OBJECT, name: 'InputWithSecretEnum' }).inputFields).to.eql([])
+
 
     expect(microfiber.getField({ typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg' })).to.be.ok
     expect(microfiber.getField({ typeName: 'MyType', fieldName: 'fieldWithSecretEnumInputArg' })).to.eql(

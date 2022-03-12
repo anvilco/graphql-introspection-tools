@@ -36,6 +36,13 @@ const defaultOpts = Object.freeze({
   removeInputFieldsWithMissingTypes: true,
   removePossibleTypesOfMissingTypes: true,
 
+  // TODO: implement
+  // removeQueriesWithMissingTypes: true,
+  // TODO: implement
+  // removeMutationsWithMissingTypes: true,
+  // TODO: implement
+  // removeSubscriptionsWithMissingTypes: true,
+
   // Remove all the types and things that are unreferenced immediately?
   cleanupSchemaImmediately: true,
 })
@@ -469,91 +476,95 @@ export class Microfiber {
 
       types.push(type)
 
-      const fields = []
-      for (const field of (type.fields || [])) {
-        if (isUndef(field)) {
-          continue
-        }
 
-        const fieldType = digUnderlyingType(field.type)
-        // Don't add it if its return type does not exist
-        if (!this._hasType(fieldType)) {
-          continue
-        }
-
-        // Keep track of this so we know what we can remove
-        typesEncountered.add(buildKey(fieldType))
-
-        const args = []
-        for (const arg of (field.args || [])) {
-          if (isUndef(arg)) {
+      if (type.fields) {
+        const fields = []
+        for (const field of type.fields) {
+          if (isUndef(field)) {
             continue
           }
 
-          const argType = digUnderlyingType(arg.type)
+          const fieldType = digUnderlyingType(field.type)
           // Don't add it if its return type does not exist
-          if (!this._hasType(argType)) {
+          if (!this._hasType(fieldType)) {
             continue
           }
 
           // Keep track of this so we know what we can remove
-          typesEncountered.add(buildKey(argType))
+          typesEncountered.add(buildKey(fieldType))
 
-          args.push(arg)
+          const args = []
+          for (const arg of (field.args || [])) {
+            if (isUndef(arg)) {
+              continue
+            }
+
+            const argType = digUnderlyingType(arg.type)
+            // Don't add it if its return type does not exist
+            if (!this._hasType(argType)) {
+              continue
+            }
+
+            // Keep track of this so we know what we can remove
+            typesEncountered.add(buildKey(argType))
+
+            args.push(arg)
+          }
+
+          // Args will always be an array. Possible empty, but never null
+          field.args = args
+          fields.push(field)
         }
 
-        // Args will always be an array. Possible empty, but never null
-        field.args = args
-        fields.push(field)
+        type.fields = fields
       }
 
-      // Fields will be null rather than empty array if no fields
-      type.fields = fields.length ? fields : null
+      if (type.inputFields) {
+        const inputFields = []
+        // Don't add it in if it's undefined, or the type is gone
+        for (const inputField of type.inputFields) {
+          if (isUndef(inputField)) {
+            continue
+          }
 
-      const inputFields = []
-      // Don't add it in if it's undefined, or the type is gone
-      for (const inputField of (type.inputFields || [])) {
-        if (isUndef(inputField)) {
-          continue
+          const inputFieldType = digUnderlyingType(inputField.type)
+          // Don't add it if its return type does not exist
+          if (!this._hasType(inputFieldType)) {
+            continue
+          }
+
+          // Keep track of this so we know what we can remove
+          typesEncountered.add(buildKey(inputFieldType))
+
+          inputFields.push(inputField)
         }
 
-        const inputFieldType = digUnderlyingType(inputField.type)
-        // Don't add it if its return type does not exist
-        if (!this._hasType(inputFieldType)) {
-          continue
-        }
-
-        // Keep track of this so we know what we can remove
-        typesEncountered.add(buildKey(inputFieldType))
-
-        inputFields.push(inputField)
+        type.inputFields = inputFields
       }
 
-      // InputFields will be null rather than empty array if no inputFields
-      type.inputFields = inputFields.length ? inputFields : null
+      if (type.possibleTypes) {
+        const possibleTypes = []
+        for (const possibleType of type.possibleTypes) {
+          if (isUndef(possibleType)) {
+            continue
+          }
 
-      const possibleTypes = []
-      for (const possibleType of (type.possibleTypes || [])) {
-        if (isUndef(possibleType)) {
-          continue
+          // possibleTypes array entries have no envelope for the type
+          // so do not do possibleType.type here
+          const possibleTypeType = digUnderlyingType(possibleType)
+          // Don't add it if its return type does not exist
+          if (!this._hasType(possibleTypeType)) {
+            continue
+          }
+
+          // Keep track of this so we know what we can remove
+          typesEncountered.add(buildKey(possibleTypeType))
+
+          possibleTypes.push(possibleType)
         }
 
-        // possibleTypes array entries have no envelope for the type
-        // so do not do possibleType.type here
-        const possibleTypeType = digUnderlyingType(possibleType)
-        // Don't add it if its return type does not exist
-        if (!this._hasType(possibleTypeType)) {
-          continue
-        }
-
-        // Keep track of this so we know what we can remove
-        typesEncountered.add(buildKey(possibleTypeType))
-
-        possibleTypes.push(possibleType)
+        type.possibleTypes = possibleTypes
       }
-
-      // PossibleTypes will be null rather than emptry array if no possibleTypes
-      type.possibleTypes = possibleTypes.length ? possibleTypes : null
     }
 
     // Only include Types that we encountered - if the options say to do so
