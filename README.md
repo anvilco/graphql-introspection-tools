@@ -5,6 +5,8 @@
 [![npm][npm]][npm-url]
 [![downloads][npm-downloads]][npm-url]
 
+<a href="https://www.useanvil.com/docs"><img src="/static/microfiber.png" width="500"></a>
+
 A library to query and manipulate GraphQL Introspection Query results in some useful ways. What ways you ask?
 
 How about:
@@ -105,7 +107,7 @@ const allTypes = microfiber.getAllTypes({
   includeMutation: false,
   // Include the Subscription type?
   includeSubscription: false,
-})
+} = {})
 ```
 ---
 #### getType
@@ -329,7 +331,7 @@ const nonNullableString = {
   }
 }
 
-digUnderlyingType(nonNullableString) // { name: 'String', kind: 'SCALAR' }=
+digUnderlyingType(nonNullableString) // { name: 'String', kind: 'SCALAR' }
 ```
 ---
 #### isReservedType
