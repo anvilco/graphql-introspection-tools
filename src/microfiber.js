@@ -145,7 +145,7 @@ export class Microfiber {
     includeMutation = false,
     // Include the Subscription type?
     includeSubscription = false,
-  }) {
+  } = {}) {
     const queryType = this.getQueryType()
     const mutationType = this.getMutationType()
     const subscriptionType = this.getSubscriptionType()
