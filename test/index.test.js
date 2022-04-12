@@ -522,7 +522,7 @@ describe('index', function () {
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'Mutation', fieldName: 'createYetAnotherType', response })).to.not.be.ok
 
     //********************************
-    // Remove the "" Subscription, which should remove the "RandomTypeOne" now that nothing
+    // Remove the "subscribeToMyTypeFieldStringChanges" Subscription, which should remove the "RandomTypeOne" now that nothing
     // references it
 
     // Make sure they're there to start with
@@ -538,6 +538,15 @@ describe('index', function () {
     //
     //
     //********************************
+
+
+    // Make sure that removing the Mutation type does some things
+    expect(findType({ kind: mutationType.kind, name: mutationType.name, response })).to.be.ok
+    expect(response.__schema.mutationType).to.be.ok
+    microfiber.removeType({ kind: mutationType.kind, name: mutationType.name })
+    response = microfiber.getResponse()
+    expect(findType({ kind: mutationType.kind, name: mutationType.name, response })).to.not.be.ok
+    expect(response.__schema.mutationType).to.not.be.ok
   })
 })
 
