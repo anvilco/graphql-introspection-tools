@@ -291,6 +291,20 @@ export class Microfiber {
     const originalSchema = this._cloneSchema()
 
     try {
+      // If we are removing a special type like a Query or Mutation or Subscription
+      // then there's some special stuff to do
+      if (typesAreSame(this.getQueryType() || {}, { kind, name })) {
+        delete this.queryTypeName
+        delete this.schema.queryType
+      } else if (typesAreSame(this.getMutationType() || {}, { kind, name })) {
+        delete this.mutationTypeName
+        delete this.schema.mutationType
+      } else if (typesAreSame(this.getSubscriptionType() || {}, { kind, name })) {
+        delete this.subscriptionTypeName
+        delete this.schema.subscriptionType
+      }
+
+      // Do this *after* the special stuff above, if necessary
       delete this.schema.types[typeIndex]
       delete this.typeToIndexMap[typeKey]
 
