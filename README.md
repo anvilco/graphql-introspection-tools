@@ -21,7 +21,7 @@ It's called `microfiber` because it is heavily used to do the cleaning and manip
 But, we also wanted to have a more intuitive, literal name so that people could find it. Hence it's also known as `@anvilco/graphql-introspection-tools`.
 
 ---
-### Repository sponsored by [Anvil](www.useanvil.com/developers)
+**Repository sponsored by [Anvil](www.useanvil.com/developers)**
 
 ![Horizontal Lockupblack](https://user-images.githubusercontent.com/293079/169453889-ae211c6c-7634-4ccd-8ca9-8970c2621b6f.png#gh-light-mode-only)
 ![Horizontal Lockup copywhite](https://user-images.githubusercontent.com/293079/169453892-895f637b-4633-4a14-b997-960c9e17579b.png#gh-dark-mode-only)
