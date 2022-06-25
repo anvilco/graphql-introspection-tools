@@ -62,7 +62,14 @@ describe('index', function () {
 
     ${$.SubscriptionType}
 
-    type MyType {
+    interface MyInterface {
+      id: String!
+    }
+
+    type MyType implements MyInterface {
+      # required due to Interface
+      id: String!
+
       # The control
       fieldString(argString: String): String
 
@@ -231,6 +238,8 @@ describe('index', function () {
     expect(subscriptionType).to.be.ok
     expect(subscriptionType).to.eql(findType({ kind: KINDS.OBJECT, name: 'Subscription', response }))
     expect(microfiber.getSubscription({ name: 'subscribeToMyTypeFieldStringChanges' })).be.ok
+
+    expect(microfiber.getType({ kind: KINDS.INTERFACE, name: 'MyInterface' })).to.be.ok
 
     expect(microfiber.getType({ name: 'NotUsed' })).to.not.be.ok
     expect(microfiber.getType({ name: 'ReferencedButNotUsed' })).to.not.be.ok
@@ -503,11 +512,14 @@ describe('index', function () {
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'Query', fieldName: 'myTypes', response })).to.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'MyType', response })).to.be.ok
 
+    expect(microfiber.getType({ kind: KINDS.INTERFACE, name: 'MyInterface' })).to.be.ok
+
     microfiber.removeQuery({ name: 'myTypes' })
     response = microfiber.getResponse()
 
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'Query', fieldName: 'myTypes', response })).to.not.be.ok
     expect(findType({ kind: KINDS.OBJECT, name: 'MyType', response })).to.not.be.ok
+    expect(microfiber.getType({ kind: KINDS.INTERFACE, name: 'MyInterface' })).to.not.be.ok
 
     // Remove YetAnotherType...which should remove the createYetAnotherType Mutation as well now that there are no
     // references to it
