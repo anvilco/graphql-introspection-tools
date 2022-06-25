@@ -571,13 +571,37 @@ export class Microfiber {
             continue
           }
 
-          // Keep track of this so we know what we can remove
-          typesEncountered.add(buildKey(possibleTypeType))
+          // Interfaces themselves list all the things that have "implemented" them
+          // in the "possibleTypes" array...but we don't want that to be an indication
+          // that the thing has been used.
+          if (type.kind !== KINDS.INTERFACE) {
+            // Keep track of this so we know what we can remove
+            typesEncountered.add(buildKey(possibleTypeType))
+          }
 
           possibleTypes.push(possibleType)
         }
 
         type.possibleTypes = possibleTypes
+      }
+
+      if (type.interfaces) {
+        const interfaces = []
+        for (const interfayce of type.interfaces) {
+          if (isUndef(interfayce)) {
+            continue
+          }
+
+          if (!this._hasType(interfayce)) {
+            continue
+          }
+
+          typesEncountered.add(buildKey(interfayce))
+
+          interfaces.push(interfayce)
+        }
+
+        type.interfaces = interfaces
       }
     }
 
