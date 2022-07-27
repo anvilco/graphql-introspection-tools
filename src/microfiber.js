@@ -10,8 +10,6 @@ import {
 
 // TODO:
 //
-// interfaces
-//
 // remove types that have no fields/inputFields/possibleTypes
 //
 // optimize to only clean if "dirty" and when pulling schema out
@@ -58,8 +56,8 @@ const optsToRemoveTypeParamsMap = Object.freeze({
 
 const kindToFieldPropertyMap = Object.freeze({
   [KINDS.OBJECT]: 'fields',
+  [KINDS.INTERFACE]: 'fields',
   [KINDS.INPUT_OBJECT]: 'inputFields',
-  // [KINDS.INTERFACE]: 'interfaces',
 })
 
 export class Microfiber {
@@ -239,6 +237,10 @@ export class Microfiber {
 
   getInputField({ typeName, fieldName }) {
     return this.getField({ typeKind: KINDS.INPUT_OBJECT, typeName, fieldName })
+  }
+
+  getInterfaceField({ typeName, fieldName }) {
+    return this.getField({ typeKind: KINDS.INTERFACE, typeName, fieldName })
   }
 
   getArg({ typeKind = KINDS.OBJECT, typeName, fieldName, argName }) {
