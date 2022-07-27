@@ -33,6 +33,7 @@ const defaultOpts = Object.freeze({
   removeArgsWithMissingTypes: true,
   removeInputFieldsWithMissingTypes: true,
   removePossibleTypesOfMissingTypes: true,
+  removeDirectiveArgumentsOfMissingTypes: true,
 
   // TODO: implement
   // removeQueriesWithMissingTypes: true,
@@ -50,7 +51,8 @@ const optsToRemoveTypeParamsMap = Object.freeze({
   removeFieldsWithMissingTypes: 'removeFieldsOfType',
   removeArgsWithMissingTypes: 'removeArgsOfType',
   removeInputFieldsWithMissingTypes: 'removeInputFieldsOfType',
-  removePossibleTypesOfMissingTypes: 'removePossibleTypesOfType'
+  removePossibleTypesOfMissingTypes: 'removePossibleTypesOfType',
+  removeDirectiveArgumentsOfMissingTypes: 'removeDirectiveArgumentsOfType',
 })
 
 
@@ -171,6 +173,18 @@ export class Microfiber {
     return this.schema.types[this._getTypeIndex({ kind, name })]
   }
 
+  getDirectives () {
+    return this.schema.directives
+  }
+
+  getDirective({ name }) {
+    if (!name) {
+      return
+    }
+
+    return this.getDirectives()[this._getDirectiveIndex({ name })]
+  }
+
   getQueryType() {
     if (!this.queryTypeName) {
       return false
@@ -252,6 +266,25 @@ export class Microfiber {
     return field.args.find((arg) => arg.name === argName)
   }
 
+  getDirectiveArg({ directiveName, argName }) {
+    const directive = this.getDirective({ name: directiveName })
+    if (!(directive && directive.args.length)) {
+      return
+    }
+
+    return directive.args.find((arg) => arg.name === argName)
+  }
+
+  removeDirective({ name, cleanup = true }) {
+    if (!name) {
+      return
+    }
+    this.schema.directives = this.schema.directives.filter((directive) => directive.name !== name)
+    if (cleanup) {
+      this.cleanSchema()
+    }
+  }
+
   removeType({
     kind = KINDS.OBJECT,
     name,
@@ -262,6 +295,7 @@ export class Microfiber {
     removeInputFieldsOfType,
     removePossibleTypesOfType,
     removeArgsOfType,
+    removeDirectiveArgumentsOfType,
   }) {
     const typeKey = buildKey({ kind, name })
     if (!Object.prototype.hasOwnProperty.call(this.typeToIndexMap, typeKey)) {
@@ -283,6 +317,7 @@ export class Microfiber {
         removeInputFieldsOfType,
         removePossibleTypesOfType,
         removeArgsOfType,
+        removeDirectiveArgumentsOfType,
       },
       mappedOpts,
     )
@@ -325,6 +360,10 @@ export class Microfiber {
       // AKA Unions
       if (mergedOpts.removePossibleTypesOfType) {
         this._removePossibleTypesOfType({ kind, name, cleanup: shouldOthersClean })
+      }
+
+      if (mergedOpts.removeDirectiveArgumentsOfType) {
+        this._removeDirectiveArgumentsOfType({ kind, name, cleanup: shouldOthersClean })
       }
 
       if (cleanup) {
@@ -483,6 +522,27 @@ export class Microfiber {
     }
     if (this.subscriptionTypeName) {
       typesEncountered.add(buildKey({ kind: KINDS.OBJECT, name: this.subscriptionTypeName }))
+    }
+
+    for (const directive of this.schema.directives) {
+      if (!directive) {
+        continue
+      }
+      const args = []
+      for (const arg of directive.args) {
+        const argType = digUnderlyingType(arg.type)
+        // Don't add it if its return type does not exist
+        if (!this._hasType(argType)) {
+          continue
+        }
+
+        // Keep track of this so we know what we can remove
+        typesEncountered.add(buildKey(argType))
+
+        args.push(arg)
+      }
+
+      directive.args = args
     }
 
     for (const type of this.schema.types) {
@@ -657,10 +717,40 @@ export class Microfiber {
     this.possibleTypesOfTypeMap = {}
     this.argsOfTypeMap = {}
 
+    this.directiveToIndexMap = {}
+    this.directiveArgsOfTypeMap = {}
+
     // Need to keep track of these so that we never remove them for not being referenced
     this.queryTypeName = get(this.schema, 'queryType.name')
     this.mutationTypeName = get(this.schema, 'mutationType.name')
     this.subscriptionTypeName = get(this.schema, 'subscriptionType.name')
+
+    for (let directivesIdx = 0; directivesIdx < this.schema.directives.length; directivesIdx++) {
+      const directive = this.schema.directives[directivesIdx]
+      if (isUndef(directive)) {
+        continue
+      }
+
+      const directivesKey = buildKey({ kind: 'DIRECTIVE', name: directive.name })
+      this.directiveToIndexMap[directivesKey] = directivesIdx
+
+      const directivePath = `directives.${directivesIdx}`
+
+      for (let argsIdx = 0; argsIdx < directive.args.length; argsIdx++) {
+        const arg = directive.args[argsIdx]
+        if (isUndef(arg)) {
+          continue
+        }
+        const argType = digUnderlyingType(arg.type)
+        const argsKey = buildKey(argType)
+        if (!this.directiveArgsOfTypeMap[argsKey]) {
+          this.directiveArgsOfTypeMap[argsKey] = []
+        }
+
+        const argPath = `${directivePath}.args.${argsIdx}`
+        this.directiveArgsOfTypeMap[argsKey].push(argPath)
+      }
+    }
 
     for (let typesIdx = 0; typesIdx < this.schema.types.length; typesIdx++) {
       const type = this.schema.types[typesIdx]
@@ -764,6 +854,15 @@ export class Microfiber {
     return false
   }
 
+  _getDirectiveIndex({ name }) {
+    const key = buildKey({ kind: 'DIRECTIVE', name })
+    if (Object.prototype.hasOwnProperty.call(this.directiveToIndexMap, key)) {
+      return this.directiveToIndexMap[key]
+    }
+
+    return false
+  }
+
   _removeThingsOfType({ kind, name, map, cleanup = true }) {
     const key = buildKey({ kind, name })
     for (const path of (map[key] || [])) {
@@ -812,6 +911,15 @@ export class Microfiber {
     cleanup = true,
   }) {
     return this._removeThingsOfType({ kind, name, map: this.argsOfTypeMap, cleanup })
+  }
+
+  _removeDirectiveArgumentsOfType({
+    // kind,
+    name,
+    // Clean up the schema afterwards?
+    cleanup = true,
+  }) {
+    return this._removeThingsOfType({ kind: 'DIRECTIVE', name, map: this.directiveArgsOfTypeMap, cleanup })
   }
 
   _cloneSchema() {
