@@ -129,9 +129,21 @@ const allTypes = microfiber.getAllTypes({
 ```
 ---
 #### getType
-Get a specific Type from yoyur schema. Supported params and their sane defaults are shown.
+Get a specific Type from your schema. Supported params and their sane defaults are shown.
 ```node
 const type = microfiber.getType({ kind: 'OBJECT', name })
+```
+---
+#### getDirectives
+Get all the Directives from your schema.
+```node
+const directives = microfiber.getDirectives()
+```
+---
+#### getDirective
+Get a specific Directive from your schema. Supported params and their sane defaults are shown.
+```node
+const directive = microfiber.getDirective({ name })
 ```
 ---
 #### getQueryType
@@ -192,6 +204,22 @@ const inputField = microfiber.getInputField({ typeName, fieldName })
 Get a specific Arg from your schema. Supported params and their sane defaults are shown.
 ```node
 const arg = microfiber.getArg({ typeKind: 'OBJECT', typeName, fieldName, argName })
+```
+---
+#### getDirectiveArg
+Get a specific Arg from a specifig Directive in your schema. Supported params and their sane defaults are shown.
+```node
+const directiveArg = microfiber.getDirectiveArg({ directiveName, argName })
+```
+---
+#### removeDirective
+Get a specific Directive from your schema. Supported params and their sane defaults are shown.
+```node
+const directiveArg = microfiber.removeDirective({
+  name,
+  // Clean up the schema afterwards?
+  cleanup = true,
+})
 ```
 ---
 #### removeType

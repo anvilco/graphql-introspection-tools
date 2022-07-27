@@ -174,6 +174,18 @@ describe('index', function () {
     type TotallyNotUsed {
       name: String
     }
+
+    input DirectiveOption {
+      key: String!
+      value: String!
+    }
+
+    input AnotherDirectiveOption {
+      key: String!
+      value: String!
+    }
+
+    directive @foo(option: DirectiveOption, anotherOption: AnotherDirectiveOption) on OBJECT
   `
   )
   def('schemaSDL', () => $.schemaSDLBase)
@@ -243,6 +255,12 @@ describe('index', function () {
     let myInterfaceId = microfiber.getField({ typeKind: KINDS.INTERFACE, typeName: 'MyInterface', fieldName: 'id' })
     expect(myInterfaceId).to.be.ok
     expect(microfiber.getInterfaceField({ typeName: 'MyInterface', fieldName: 'id' })).to.eql(myInterfaceId)
+
+    expect(microfiber.getDirective({ name: 'foo' })).to.be.ok
+    expect(microfiber.getDirectiveArg({ directiveName: 'foo', argName: 'option' })).to.be.ok
+    expect(microfiber.getType({ kind: KINDS.INPUT_OBJECT, name: 'DirectiveOption' })).to.be.ok
+    expect(microfiber.getDirectiveArg({ directiveName: 'foo', argName: 'anotherOption' })).to.be.ok
+    expect(microfiber.getType({ kind: KINDS.INPUT_OBJECT, name: 'AnotherDirectiveOption' })).to.be.ok
 
     expect(microfiber.getType({ name: 'NotUsed' })).to.not.be.ok
     expect(microfiber.getType({ name: 'ReferencedButNotUsed' })).to.not.be.ok
@@ -557,6 +575,31 @@ describe('index', function () {
     //
     //********************************
 
+
+    //*******************************
+    // Remove the DirectiveOption Type, which should remove it from the directive Args
+    //
+
+    microfiber.removeType({ kind: KINDS.INPUT_OBJECT, name: 'DirectiveOption' })
+    expect(microfiber.getDirective({ name: 'foo' })).to.be.ok
+    expect(microfiber.getDirectiveArg({ directiveName: 'foo', argName: 'option' })).to.not.be.ok
+    expect(microfiber.getType({ kind: KINDS.INPUT_OBJECT, name: 'DirectiveOption' })).to.not.be.ok
+    expect(microfiber.getDirectiveArg({ directiveName: 'foo', argName: 'anotherOption' })).to.be.ok
+    expect(microfiber.getType({ kind: KINDS.INPUT_OBJECT, name: 'AnotherDirectiveOption' })).to.be.ok
+
+
+    // And now remove the "foo" directive, and the AnotherDirectiveOption should be cleaned up and gone
+    microfiber.removeDirective({ name: 'foo' })
+    expect(microfiber.getDirective({ name: 'foo' })).to.not.be.ok
+    expect(microfiber.getDirectiveArg({ directiveName: 'foo', argName: 'option' })).to.not.be.ok
+    expect(microfiber.getType({ kind: KINDS.INPUT_OBJECT, name: 'DirectiveOption' })).to.not.be.ok
+    expect(microfiber.getDirectiveArg({ directiveName: 'foo', argName: 'anotherOption' })).to.not.be.ok
+    expect(microfiber.getType({ kind: KINDS.INPUT_OBJECT, name: 'AnotherDirectiveOption' })).to.not.be.ok
+
+
+    //
+    //
+    //*******************************
 
     // Make sure that removing the Mutation type does some things
     expect(findType({ kind: mutationType.kind, name: mutationType.name, response })).to.be.ok
