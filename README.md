@@ -176,8 +176,14 @@ Get a specific Field from your schema. Supported params and their sane defaults 
 const field = microfiber.getField({ typeKind: 'OBJECT', typeName, fieldName })
 ```
 ---
+#### getInterfaceField
+Get a specific Field from an Interface in your schema. A convenience wrapper around `getField({ typeKind: 'INTERFACE', ...})`
+```node
+const interfaceField = microfiber.getInterfaceField({ typeName, fieldName })
+```
+---
 #### getInputField
-Get a specific InputField from your schema.
+Get a specific InputField from your schema. A convenience wrapper around `getField({ typeKind: 'INPUT_OBJECT', ...})`
 ```node
 const inputField = microfiber.getInputField({ typeName, fieldName })
 ```

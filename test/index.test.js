@@ -240,6 +240,9 @@ describe('index', function () {
     expect(microfiber.getSubscription({ name: 'subscribeToMyTypeFieldStringChanges' })).be.ok
 
     expect(microfiber.getType({ kind: KINDS.INTERFACE, name: 'MyInterface' })).to.be.ok
+    let myInterfaceId = microfiber.getField({ typeKind: KINDS.INTERFACE, typeName: 'MyInterface', fieldName: 'id' })
+    expect(myInterfaceId).to.be.ok
+    expect(microfiber.getInterfaceField({ typeName: 'MyInterface', fieldName: 'id' })).to.eql(myInterfaceId)
 
     expect(microfiber.getType({ name: 'NotUsed' })).to.not.be.ok
     expect(microfiber.getType({ name: 'ReferencedButNotUsed' })).to.not.be.ok
@@ -513,6 +516,9 @@ describe('index', function () {
     expect(findType({ kind: KINDS.OBJECT, name: 'MyType', response })).to.be.ok
 
     expect(microfiber.getType({ kind: KINDS.INTERFACE, name: 'MyInterface' })).to.be.ok
+    myInterfaceId = microfiber.getField({ typeKind: KINDS.INTERFACE, typeName: 'MyInterface', fieldName: 'id' })
+    expect(myInterfaceId).to.be.ok
+    expect(microfiber.getInterfaceField({ typeName: 'MyInterface', fieldName: 'id' })).to.eql(myInterfaceId)
 
     microfiber.removeQuery({ name: 'myTypes' })
     response = microfiber.getResponse()
