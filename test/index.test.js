@@ -12,6 +12,10 @@ import {
 describe('index', function () {
   def('QueryType', () => `type Query {
       myTypes: [MyType!]
+      myMyOtherInterfaceTypes: [MyOtherInterface]
+      myOtherOtherInterfaceType: MyOtherOtherInterfaceType
+      myUnions: [MyUnion]
+      myOtherUnionType: MyOtherUnionType
     }`
   )
 
@@ -185,6 +189,30 @@ describe('index', function () {
       value: String!
     }
 
+    interface MyOtherInterface {
+      id: String!
+    }
+
+    type MyOtherInterfaceType implements MyOtherInterface {
+      id: String!
+      foo: String
+    }
+
+    type MyOtherOtherInterfaceType implements MyOtherInterface {
+      id: String!
+      foo: String
+    }
+
+    type MyUnionType {
+      foo: String
+    }
+
+    type MyOtherUnionType {
+      bar: String
+    }
+
+    union MyUnion = MyUnionType | MyOtherUnionType
+
     directive @foo(option: DirectiveOption, anotherOption: AnotherDirectiveOption) on OBJECT
   `
   )
@@ -255,6 +283,14 @@ describe('index', function () {
     let myInterfaceId = microfiber.getField({ typeKind: KINDS.INTERFACE, typeName: 'MyInterface', fieldName: 'id' })
     expect(myInterfaceId).to.be.ok
     expect(microfiber.getInterfaceField({ typeName: 'MyInterface', fieldName: 'id' })).to.eql(myInterfaceId)
+
+    expect(microfiber.getType({ kind: KINDS.INTERFACE, name: 'MyOtherInterface' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyOtherInterfaceType' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyOtherOtherInterfaceType' })).to.be.ok
+
+    expect(microfiber.getType({ kind: KINDS.UNION, name: 'MyUnion' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyUnionType' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyOtherUnionType' })).to.be.ok
 
     expect(microfiber.getDirective({ name: 'foo' })).to.be.ok
     expect(microfiber.getDirectiveArg({ directiveName: 'foo', argName: 'option' })).to.be.ok
@@ -595,6 +631,64 @@ describe('index', function () {
     expect(microfiber.getType({ kind: KINDS.INPUT_OBJECT, name: 'DirectiveOption' })).to.not.be.ok
     expect(microfiber.getDirectiveArg({ directiveName: 'foo', argName: 'anotherOption' })).to.not.be.ok
     expect(microfiber.getType({ kind: KINDS.INPUT_OBJECT, name: 'AnotherDirectiveOption' })).to.not.be.ok
+
+
+    //
+    //
+    //*******************************
+
+    //*******************************
+    //
+    // Stuff regarding INTERFACE usages
+    //
+
+    expect(microfiber.getType({ kind: KINDS.INTERFACE, name: 'MyOtherInterface' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyOtherInterfaceType' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyOtherOtherInterfaceType' })).to.be.ok
+
+    // Remove the query that uses MyOtherOtherInterfaceType
+    microfiber.removeQuery({ name: 'myOtherOtherInterfaceType' })
+
+    // Both are still here because myMyOtherInterfaceTypes query returns the Interface
+    expect(microfiber.getType({ kind: KINDS.INTERFACE, name: 'MyOtherInterface' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyOtherInterfaceType' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyOtherOtherInterfaceType' })).to.be.ok
+
+    // Remove the query that uses MyOtherInterface
+    microfiber.removeQuery({ name: 'myMyOtherInterfaceTypes' })
+
+    // Everything is gone now.
+    expect(microfiber.getType({ kind: KINDS.INTERFACE, name: 'MyOtherInterface' })).to.not.be.ok
+    expect(microfiber.getType({ name: 'MyOtherInterfaceType' })).to.not.be.ok
+    expect(microfiber.getType({ name: 'MyOtherOtherInterfaceType' })).to.not.be.ok
+
+    //
+    //
+    //*******************************
+
+
+    //*******************************
+    //
+    // Stuff regarding UNION usages
+    //
+
+    expect(microfiber.getType({ kind: KINDS.UNION, name: 'MyUnion' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyUnionType' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyOtherUnionType' })).to.be.ok
+
+    // Remove the query that uses MyOtherUnionType
+    microfiber.removeQuery({ name: 'myOtherUnionType' })
+
+    expect(microfiber.getType({ kind: KINDS.UNION, name: 'MyUnion' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyUnionType' })).to.be.ok
+    expect(microfiber.getType({ name: 'MyOtherUnionType' })).to.be.ok
+
+    // Remove the query that uses MyUnion
+    microfiber.removeQuery({ name: 'myUnions' })
+
+    expect(microfiber.getType({ kind: KINDS.UNION, name: 'MyUnion' })).to.not.be.ok
+    expect(microfiber.getType({ name: 'MyUnionType' })).to.not.be.ok
+    expect(microfiber.getType({ name: 'MyOtherUnionType' })).to.not.be.ok
 
 
     //

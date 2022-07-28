@@ -512,6 +512,9 @@ export class Microfiber {
     const typesEncountered = new Set()
     const types = []
 
+    const interfacesEncounteredKeys = new Set()
+    const interfacesByKey = {}
+
     // The Query, Mutation and Subscription Types should never be removed due to not being referenced
     // by anything
     if (this.queryTypeName) {
@@ -552,6 +555,9 @@ export class Microfiber {
 
       types.push(type)
 
+      if (type.kind === KINDS.INTERFACE) {
+        interfacesByKey[buildKey(type)] = type
+      }
 
       if (type.fields) {
         const fields = []
@@ -561,9 +567,14 @@ export class Microfiber {
           }
 
           const fieldType = digUnderlyingType(field.type)
+
           // Don't add it if its return type does not exist
           if (!this._hasType(fieldType)) {
             continue
+          }
+
+          if (fieldType.kind === KINDS.INTERFACE) {
+            interfacesEncounteredKeys.add(buildKey(fieldType))
           }
 
           // Keep track of this so we know what we can remove
@@ -664,6 +675,18 @@ export class Microfiber {
         }
 
         type.interfaces = interfaces
+      }
+    }
+
+    for (const interfaceEncounteredKey of interfacesEncounteredKeys.values()) {
+      const interfayce = interfacesByKey[interfaceEncounteredKey]
+      for (const possibleType of interfayce?.possibleTypes || []) {
+        if (!this._hasType(possibleType)) {
+          continue
+        }
+
+        // Keep track of this so we know what we can remove
+        typesEncountered.add(buildKey(possibleType))
       }
     }
 
