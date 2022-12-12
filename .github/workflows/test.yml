@@ -9,17 +9,51 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  GITHUB_SHA: ${{ github.event.pull_request.head.sha }}
+
 jobs:
+  build-and-cache-dist:
+    name: Build and Cache dist
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      id: setup-node
+      uses: actions/setup-node@v3
+      with:
+        node-version-file: '.nvmrc'
+        cache: 'yarn'
+
+    - name: Cache dist after Build
+      uses: actions/cache@v3
+      with:
+        path: dist/
+        key: ${{ runner.os }}-node-${{ steps.setup-node.outputs.node-version }}-${{ env.GITHUB_SHA }}
+
+    - run: yarn install
+    - run: yarn build
+
   test:
+    needs: build-and-cache-dist
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [14.x, 16.x]
+        node-version: [14, 16, 18]
         # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+
+    - name: Load dist from cache
+      uses: actions/cache@v3
+      with:
+        path: dist/
+        key: ${{ runner.os }}-node-${{ steps.setup-node.outputs.node-version }}-${{ env.GITHUB_SHA }}
+
     - name: Use Node.js ${{ matrix.node-version }}
-      uses: actions/setup-node@v2
+      uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'yarn'
