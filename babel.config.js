@@ -6,7 +6,7 @@ module.exports = {
       {
         targets: {
           // Keep this roughly in-line with our "engines.node" value in package.json
-          node: '8'
+          node: '14'
         }
       }
     ],
