@@ -40,7 +40,7 @@
     "prepare": "yarn clean && yarn build",
     "pub": "yarn prepare && npm publish",
     "pub:dry-run": "yarn prepare && npm publish --dry-run",
-    "test": "yarn mocha --config ./test/mocha-config.js",
+    "test": "yarn prepare && yarn mocha --config ./test/mocha-config.js",
     "test:watch": "nodemon -x 'yarn test' --ignore dist/",
     "test:debug:watch": "nodemon -x 'yarn test:debug' --ignore dist/",
     "test:debug": "yarn test --node-option inspect=0.0.0.0:9223"
