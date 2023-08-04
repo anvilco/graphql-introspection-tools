@@ -194,6 +194,12 @@ Get a specific Field from an Interface in your schema. A convenience wrapper aro
 const interfaceField = microfiber.getInterfaceField({ typeName, fieldName })
 ```
 ---
+#### getEnumValue
+Get a specific EnumValue from your schema. A convenience wrapper around `getField({ typeKind: 'ENUM', ...})`
+```node
+const inputField = microfiber.getEnumValue({ typeName, fieldName })
+```
+---
 #### getInputField
 Get a specific InputField from your schema. A convenience wrapper around `getField({ typeKind: 'INPUT_OBJECT', ...})`
 ```node

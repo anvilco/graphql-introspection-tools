@@ -351,6 +351,12 @@ describe('index', function () {
     let secretEnum = findType({ kind: KINDS.ENUM, name: 'SecretEnum', response })
     expect(secretEnum).to.be.ok
     expect(secretEnum.enumValues).to.be.an('array').of.length(3)
+    expect(secretEnum.enumValues.map((enumValue) => enumValue.name)).eql(['ENUM1', 'ENUM2', 'ENUM3'])
+    expect(secretEnum).to.eql(microfiber.getType({ kind: KINDS.ENUM, name: 'SecretEnum' }))
+
+    let secretEnumValue = microfiber.getEnumValue({ typeName: 'SecretEnum', fieldName: 'ENUM2' })
+    expect(secretEnumValue).to.be.ok
+    expect(secretEnumValue.name).to.eql('ENUM2')
 
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretEnum', response })).to.be.ok
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretEnumArray', response })).to.be.ok
@@ -419,6 +425,10 @@ describe('index', function () {
     secretEnum = findType({ kind: KINDS.ENUM, name: 'SecretEnum', response })
     expect(secretEnum).to.be.ok
     expect(secretEnum.enumValues).to.be.an('array').of.length(2)
+    expect(secretEnum.enumValues.map((enumValue) => enumValue.name)).eql(['ENUM1', 'ENUM3'])
+
+    secretEnumValue = microfiber.getEnumValue({ typeName: 'SecretEnum', fieldName: 'ENUM2' })
+    expect(secretEnumValue).to.not.be.ok
 
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretEnum', response })).to.be.ok
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretEnumArray', response })).to.be.ok
@@ -440,6 +450,9 @@ describe('index', function () {
     expect(findType({ kind: KINDS.OBJECT, name: 'Subscription', response })).to.be.ok
 
     expect(findType({ kind: KINDS.ENUM, name: 'SecretEnum', response })).to.not.be.ok
+    expect(microfiber.getType({ kind: KINDS.ENUM, name: 'SecretEnum' })).to.not.be.ok
+    secretEnumValue = microfiber.getEnumValue({ typeName: 'SecretEnum', fieldName: 'ENUM1' })
+    expect(secretEnumValue).to.not.be.ok
 
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretEnum', response })).to.not.be.ok
     expect(findFieldOnType({ typeKind: KINDS.OBJECT, typeName: 'MyType', fieldName: 'fieldSecretEnumArray', response })).to.not.be.ok

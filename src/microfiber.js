@@ -60,6 +60,7 @@ const kindToFieldPropertyMap = Object.freeze({
   [KINDS.OBJECT]: 'fields',
   [KINDS.INTERFACE]: 'fields',
   [KINDS.INPUT_OBJECT]: 'inputFields',
+  [KINDS.ENUM]: 'enumValues',
 })
 
 export class Microfiber {
@@ -247,6 +248,10 @@ export class Microfiber {
     }
 
     return type[fieldsProperty].find((field) => field.name === fieldName)
+  }
+
+  getEnumValue({ typeName, fieldName }) {
+    return this.getField({ typeKind: KINDS.ENUM, typeName, fieldName })
   }
 
   getInputField({ typeName, fieldName }) {
