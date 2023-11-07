@@ -1,3 +1,6 @@
+#### 2.1.1
+- Update dependencies
+
 #### 2.1.0
 - Fix/Add support for `EnumValue` via `getEnumValue()` and `getField()`
 - Update dependencies
