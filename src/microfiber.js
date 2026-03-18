@@ -1,6 +1,4 @@
-import get from 'lodash.get'
-import unset from 'lodash.unset'
-import defaults from 'lodash.defaults'
+import { defaults, get, unset } from 'lodash'
 
 import {
   KINDS,
