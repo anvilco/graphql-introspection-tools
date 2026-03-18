@@ -46,9 +46,7 @@
     "test:debug": "yarn test --node-option inspect=0.0.0.0:9223"
   },
   "dependencies": {
-    "lodash.defaults": "^4.2.0",
-    "lodash.get": "^4.4.2",
-    "lodash.unset": "^4.5.2"
+    "lodash": "^4.17.23"
   },
   "devDependencies": {
     "@babel/cli": "^7.17.6",
@@ -60,7 +58,6 @@
     "eslint": "^8.10.0",
     "eslint-plugin-mocha": "^10.0.3",
     "graphql": "^16.3.0",
-    "lodash.isequal": "^4.5.0",
     "mocha": "^10.2.0",
     "nodemon": "^3.0.1",
     "rimraf": "^5.0.1"
